@@ -1,16 +1,18 @@
 {
   "manifest_version": 3,
   "name": "Universal Search Parameter Injector",
-  "version": "1.1",
-  "description": "Injects URL parameter values into specified element IDs on user-approved pages.",
+  "version": "1.2", // Increment version
+  "description": "Injects URL parameter values into specified element IDs/selectors on user-approved pages. Use right-click to build URL.",
   "permissions": [
-    "storage",      // To save the user's list of URLs
-    "scripting",    // To inject content scripts programmatically
-    "tabs"          // To check the URL of the current tab
-    // "webNavigation" // Alternative to tabs.onUpdated if needed, potentially more reliable
+    "storage",
+    "scripting",
+    "tabs",
+    "contextMenus",     // <-- Add permission for right-click menus
+    "clipboardWrite",   // <-- Add permission to write to clipboard
+    "notifications"     // <-- Add permission for user feedback
   ],
   "host_permissions": [
-    "<all_urls>"    // REQUIRED for chrome.scripting.executeScript to inject into arbitrary user-defined hosts
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"
