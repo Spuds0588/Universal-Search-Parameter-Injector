@@ -1,0 +1,106 @@
+/* popup.css */
+body {
+    font-family: sans-serif;
+    width: 350px; /* Adjust as needed */
+    padding: 10px;
+    font-size: 14px;
+}
+
+h1, h2 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+h2 {
+   font-size: 1.1em;
+}
+
+p {
+    margin-bottom: 15px;
+    color: #555;
+    font-size: 0.9em;
+}
+
+code {
+    background-color: #eee;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 0.95em;
+}
+
+.add-url-section {
+    display: flex;
+    margin-bottom: 15px;
+}
+
+#new-url-input {
+    flex-grow: 1;
+    padding: 5px;
+    margin-right: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+#add-url-button, .remove-btn {
+    padding: 5px 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+#add-url-button:hover, .remove-btn:hover {
+    background-color: #0056b3;
+}
+
+#url-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 200px; /* Allow scrolling if list gets long */
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 3px;
+}
+
+#url-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    border-bottom: 1px solid #eee;
+}
+
+#url-list li:last-child {
+    border-bottom: none;
+}
+
+#url-list .url-text {
+    word-break: break-all; /* Prevent long URLs from overflowing */
+    margin-right: 10px;
+}
+
+.remove-btn {
+    background-color: #dc3545;
+    flex-shrink: 0; /* Prevent button from shrinking */
+}
+
+.remove-btn:hover {
+    background-color: #c82333;
+}
+
+#status-message {
+    margin-top: 10px;
+    font-size: 0.9em;
+    min-height: 1.2em; /* Prevent layout shift */
+}
+
+#status-message.success {
+    color: green;
+}
+
+#status-message.error {
+    color: red;
+}

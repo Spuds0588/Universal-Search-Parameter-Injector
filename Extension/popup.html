@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Allowed URLs</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <h1>Allowed Base URLs</h1>
+    <p>Add base URLs (e.g., <code>https://www.example.com/</code>) where the injector should run.</p>
+
+    <div class="add-url-section">
+        <input type="text" id="new-url-input" placeholder="e.g., https://www.example.com/">
+        <button id="add-url-button">Add</button>
+    </div>
+
+    <div id="status-message"></div>
+
+    <h2>Current List:</h2>
+    <ul id="url-list">
+        <!-- URLs will be added here by JavaScript -->
+        <li>Loading...</li>
+    </ul>
+
+    <script src="popup.js"></script>
+</body>
+</html>

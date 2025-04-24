@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Universal Search Parameter Injector",
+  "version": "1.1",
+  "description": "Injects URL parameter values into specified element IDs on user-approved pages.",
+  "permissions": [
+    "storage",      // To save the user's list of URLs
+    "scripting",    // To inject content scripts programmatically
+    "tabs"          // To check the URL of the current tab
+    // "webNavigation" // Alternative to tabs.onUpdated if needed, potentially more reliable
+  ],
+  "host_permissions": [
+    "<all_urls>"    // REQUIRED for chrome.scripting.executeScript to inject into arbitrary user-defined hosts
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
