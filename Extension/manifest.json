@@ -7,9 +7,7 @@
     "storage",
     "scripting",
     "tabs",
-    "contextMenus"     // KEEP this
-    // "clipboardWrite", // REMOVE this
-    // "notifications"  // REMOVE this
+    "contextMenus"
   ],
   "host_permissions": [
     "<all_urls>"
