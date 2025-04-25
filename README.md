@@ -4,86 +4,131 @@
 
 ## Overview
 
-This Chrome extension provides a mechanism to automatically populate HTML form elements or `contentEditable` areas based on URL query parameters. Unlike Chrome's native custom search engine feature which relies on specific website implementations (like OpenSearch), this extension directly injects values into the DOM based on element IDs found in the URL parameters.
+This Chrome extension allows you to leverage functionality similar to Chrome's built-in custom search engines on virtually *any* website, even those that don't natively support it.
 
-Crucially, this functionality is restricted to run only on base URLs explicitly added to an allowlist managed by the user via the extension's popup interface. This prevents the extension from attempting to inject scripts or manipulate the DOM on unintended websites.
+It works by letting you construct special URLs containing parameters that tell the extension which elements on a page to interact with (like input fields or buttons) and what actions to perform (like injecting text, clicking, waiting, or simulating an Enter key press). Actions are performed sequentially based on the order of parameters in the URL.
 
-## Architecture
+For security and control, the extension will only activate on websites whose base URL you have explicitly added to an **Allowlist** via the extension's popup.
 
-The extension follows a standard Manifest V3 architecture utilizing a service worker, content scripts (injected programmatically), and a popup action.
+## Key Features
 
-*   **`manifest.json`**: Defines permissions, entry points (service worker, action popup), icons, and crucially, the `host_permissions` needed for dynamic script injection.
-*   **`background.js` (Service Worker)**: Acts as the central coordinator.
-    *   Listens for tab navigation events (`chrome.tabs.onUpdated`).
-    *   Manages the allowlist of base URLs stored in `chrome.storage.sync`.
-    *   Determines if the current navigation URL matches an allowed base URL.
-    *   If a match occurs, uses the `chrome.scripting.executeScript` API to dynamically inject `content.js` into the relevant tab.
-*   **`content.js`**: The script executed within the context of the target web page.
-    *   Parses the `window.location.search` string using `URLSearchParams`.
-    *   Iterates through all query parameters, treating each key as a potential target element ID and the corresponding value as the data to inject.
-    *   Attempts to find elements using `document.getElementById(key)`.
-    *   Injects the value into the `.value` property for standard form elements (`input`, `textarea`, `select`) or `.textContent` for `contentEditable` elements.
-    *   Dispatches `input` and `change` events programmatically after value injection to ensure compatibility with JavaScript frameworks and event listeners on the host page.
-    *   Implements a `MutationObserver` to handle cases where target elements might be loaded dynamically *after* the initial DOM load. It observes the `document.body` for additions and attempts injection if a previously missing target element appears. Includes a timeout to prevent indefinite observation.
-    *   Uses a simple guard (`window.universalSearchParameterInjectorRan`) to prevent its core logic from executing multiple times if injected more than once per page load cycle.
-*   **`popup.html` / `popup.css` / `popup.js`**: Provides the user interface for managing the allowlist.
-    *   Uses `chrome.storage.sync` to load, display, add, and remove allowed base URLs.
-    *   Provides basic input validation (requires `http://` or `https://` prefix).
-    *   Changes are saved immediately to synced storage.
-*   **`icons/`**: Contains standard extension icons for different contexts.
+*   **Parameter Injection:** Inject text values into input fields, textareas, or contenteditable elements using URL parameters.
+*   **Click Simulation:** Simulate a click on buttons, links, or other elements.
+*   **Wait Action:** Introduce timed pauses between actions.
+*   **Enter Keypress Simulation:** Simulate pressing the "Enter" key, typically after filling an input.
+*   **Flexible Element Identification:** Target elements using:
+    *   ARIA Label (Recommended for dynamic sites)
+    *   Element ID
+    *   CSS Class combinations
+*   **User-Managed Allowlist:** Extension only runs on sites you approve.
+*   **Right-Click URL Builder:** Incrementally build the action sequence URL by right-clicking elements on allowed pages (Note: This method reloads the page after each step).
+*   **Manual URL Crafting:** Full control for advanced users to write parameters directly.
+*   **Sequential Execution:** Parameters are processed in the order they appear in the URL.
 
-## Detailed Workflow
+## Installation
 
-1.  **Initialization / Navigation**: When a tab finishes loading (`changeInfo.status === 'complete'` in `tabs.onUpdated`), the `background.js` service worker is triggered.
-2.  **URL Check**: The service worker retrieves the tab's URL. It ignores non-HTTP/S URLs.
-3.  **Allowlist Check**: It asynchronously fetches the `allowedBaseUrls` array from `chrome.storage.sync`.
-4.  **Matching**: It iterates through the `allowedBaseUrls` and checks if the tab's current URL `startsWith()` any of the allowed base URLs.
-5.  **Dynamic Injection**: If a match is found:
-    *   The service worker calls `chrome.scripting.executeScript`, targeting the specific `tabId` and specifying `content.js` as the file to inject.
-    *   **Permission Requirement**: This step requires the `"scripting"` permission and, critically, the `"host_permissions": ["<all_urls>"]` (or appropriately broad patterns). The host permission is necessary for the extension to *gain the capability* to inject into arbitrary origins *if* the user adds them to the allowlist later. It does *not* mean the script runs everywhere automatically.
-6.  **Content Script Execution (`content.js`)**:
-    *   The script runs within the sandboxed environment of the target webpage.
-    *   The `window.universalSearchParameterInjectorRan` flag is checked; if true, the script exits early. Otherwise, the flag is set to true.
-    *   `new URLSearchParams(window.location.search)` extracts the query parameters.
-    *   The script iterates through each `[key, value]` pair from the parameters.
-    *   **Immediate Injection Attempt**: For each key, `document.getElementById(key)` is called.
-        *   If an element is found:
-            *   Its type is checked (`'value' in element` or `isContentEditable`).
-            *   The `value` (from the URL parameter) is assigned to the element's `value` or `textContent`.
-            *   `new Event('input', { bubbles: true })` and `new Event('change', { bubbles: true })` are dispatched on the element. This is crucial for triggering potential framework bindings or event listeners that rely on user interaction events.
-        *   If the element is *not* found, the `[key, value]` pair is added to a `pendingInjections` map.
-    *   **Delayed Injection Setup**: If `pendingInjections` is not empty after the initial pass:
-        *   A `MutationObserver` is configured to watch `document.body` (and its `subtree`) for `childList` changes (nodes being added/removed).
-        *   When mutations occur, the observer's callback iterates through the `pendingInjections`. For each pending key, it checks `document.getElementById(key)` again.
-        *   If a pending element is now found, the injection (value assignment + event dispatching) is attempted, and the key is removed from `pendingInjections`.
-        *   If all pending injections are completed, the observer `disconnect()`s itself.
-        *   A `setTimeout` is also established (e.g., 15 seconds) to `disconnect()` the observer regardless, preventing it from running indefinitely on highly dynamic pages or if target elements never appear.
-7.  **User Interaction (Popup)**:
-    *   Clicking the extension action icon opens `popup.html`.
-    *   `popup.js` fetches the `allowedBaseUrls` from `chrome.storage.sync` and renders the list.
-    *   Adding/removing URLs via the popup UI updates the list in the UI and saves the modified array back to `chrome.storage.sync`.
+1.  Download or clone the extension files/repository.
+2.  Open Google Chrome and navigate to `chrome://extensions/`.
+3.  Enable **"Developer mode"** using the toggle switch (usually in the top right corner).
+4.  Click the **"Load unpacked"** button.
+5.  Select the directory containing the extension files (`manifest.json`, etc.).
+6.  The extension icon should appear in your toolbar.
 
-## Key Implementation Details & Considerations
+## How it Works Conceptually
 
-*   **Permissions Rationale**:
-    *   `storage`: Required for persisting the user's `allowedBaseUrls` list using `chrome.storage.sync`.
-    *   `scripting`: Required for programmatic injection via `chrome.scripting.executeScript`.
-    *   `tabs`: Used by the background script to get the URL of updated tabs (`tabs.onUpdated`). An alternative could be `webNavigation` (`onCompleted` event), which might offer slightly more precision, especially for SPA transitions if filtered correctly (e.g., `frameId === 0`).
-    *   `host_permissions: ["<all_urls>"]`: Essential for `chrome.scripting.executeScript` to function on *any* potential host the user might add to their allowlist. The actual execution is gated by the explicit check against `allowedBaseUrls` in `background.js`.
-*   **Manifest V3 Service Worker**: Adheres to MV3's event-driven model. The background script is non-persistent and wakes up only when needed (e.g., on `tabs.onUpdated`). State must be managed via storage APIs.
-*   **URL Parameter Mapping**: The current implementation assumes a direct mapping: `?elementId=value`. Any query parameter key is treated as a potential element ID. This offers flexibility but requires users to construct URLs precisely. There's no specific prefix (like `?inject_elementId=value`) required.
-*   **Dynamic Element Handling**: The use of `MutationObserver` provides robustness for pages where target elements are rendered client-side after the initial HTML parse (common in SPAs or with heavy JavaScript). The timeout ensures resource cleanup.
-*   **Event Dispatching**: Manually dispatching `input` and `change` events is vital for ensuring that host page JavaScript (especially in frameworks like React, Vue, Angular) recognizes the value change as if it were user-initiated. Simply setting `.value` often isn't sufficient.
-*   **Sync Storage**: Using `chrome.storage.sync` allows the user's allowlist to synchronize across different devices where they are logged into the same Chrome profile.
+The extension monitors page loads on allowed websites. If the URL contains special query parameters that the extension recognizes, it waits for the page elements specified by those parameters to potentially load. It then attempts to perform the requested actions (injecting text, clicking, waiting, pressing Enter) in the sequence defined by the parameter order.
 
-## Potential Future Enhancements
+## Usage Instructions
 
-*   Support for more flexible URL matching (e.g., wildcards, regex) instead of just `startsWith`.
-*   Allow targeting elements via CSS selectors in addition to IDs (e.g., `?cssSelector=.search-field&value=query`).
-*   Implement a specific prefix for query parameters to avoid clashes with existing site parameters (e.g., `?usp_elementId=value`).
-*   More sophisticated detection of SPA navigation events beyond basic `tabs.onUpdated`.
-*   Provide visual feedback on the page when an injection occurs (e.g., brief element highlighting).
-*   Add import/export functionality for the allowlist in the popup.
+### 1. Allowlisting Websites (Required)
+
+Before the extension can work on a site, you must add its base URL to the allowlist.
+
+1.  Navigate to the website you want to enable the extension for (e.g., `https://www.example.com/some/path`).
+2.  Click the **Universal Search Parameter Injector icon** in your Chrome toolbar to open the popup.
+3.  **Option A (Easiest):** Click the **"Add Current Site to Allowlist"** button. This will automatically extract the base URL (e.g., `https://www.example.com/`) and add it.
+4.  **Option B (Manual):** Enter the **base URL** (including `https://` or `http://` and preferably ending with a `/`, like `https://www.example.com/`) into the "Add New URL Manually" input field and click "Add".
+5.  The URL will appear in the "Current List". You can remove URLs using the "Remove" button next to them.
+
+### 2. Building the URL Sequence
+
+You can create the sequence of actions in two ways:
+
+#### Method A: Using Right-Click (Easier, With Reloads)
+
+This method lets you build the URL step-by-step directly on the page. **Important Note:** Each step added via right-click will **automatically reload the page** with the new parameter appended to the URL. This provides immediate feedback but means:
+*   Any state on the page (like filled forms not yet submitted, or dynamically opened menus) will be lost on each reload.
+*   Some websites might have security measures that block rapid, automated reloads (like Realtor.com, Zillow.com), causing this method to fail with errors on those sites.
+
+**Steps:**
+
+1.  Ensure the website is **allowlisted**.
+2.  Navigate to the base page on the site where you want the actions to start.
+3.  **Right-click** on the first element you want to interact with (e.g., a search input field).
+4.  Choose the appropriate action from the context menu:
+    *   **"Add to Injector: Set Value (search-text-here)"**: Select this for input fields, textareas, etc. where you want to inject text later. It will add a parameter like `elementId=search-text-here` or `css:[aria-label...]=search-text-here` to the URL.
+    *   **"Add to Injector: Click Element"**: Select this for buttons, links, etc. It will add a parameter like `elementId=click` or `css:.selector=click`.
+5.  The extension will try to identify the element using `aria-label`, then ID, then CSS classes.
+6.  The page will **reload** with the new parameter added to the URL in the address bar.
+7.  **Repeat steps 3-6** for each subsequent element you want to interact with (e.g., right-click the submit button after adding the input parameter). The parameters will be added sequentially to the URL in the address bar.
+8.  Once you have added all the steps, **manually copy the final URL** from your address bar. This is the URL you will use (see Step 3 below).
+
+*(Note: If the right-click method fails to identify an element, you may receive an alert, or it might silently fail. In these cases, you'll need to use the Manual URL Crafting method below.)*
+
+#### Method B: Manual URL Crafting (Advanced / More Control)
+
+You can construct the URL manually, giving you precise control over selectors and actions. This is useful if the right-click method fails or if you prefer using specific CSS selectors found via DevTools (`F12` -> Inspect Element).
+
+1.  Start with the base URL of the allowlisted site (e.g., `https://www.example.com/`).
+2.  Add a `?` to start the query parameters.
+3.  Add parameters in the format `key=value`, separated by `&`. The **order matters** - actions execute sequentially.
+4.  **Parameter Key Types:**
+    *   **Element ID:** Use the element's `id` directly as the key.
+        *   `https://www.example.com/?search-input=search-text-here`
+        *   `https://www.example.com/?submit-button=click`
+    *   **CSS Selector:** Use the prefix `css:` followed by a valid CSS selector. This is powerful for targeting elements without stable IDs or using attributes like `aria-label`.
+        *   *ARIA Label:* `css:[aria-label="Label Text"]=search-text-here` (Quotes inside the label value might need care, but often work).
+        *   *Class:* `css:.some-class.another-class=click`
+        *   *Attribute:* `css:[data-testid="main-search"]=search-text-here`
+        *   *Partial ID:* `css:[id^="dynamic-prefix-"]=click` (Targets ID starting with "dynamic-prefix-")
+    *   **Wait Action:** Introduce a pause. The key is `wait`. The value specifies duration (case-insensitive).
+        *   `wait=500ms` (Wait 500 milliseconds)
+        *   `wait=2s` (Wait 2 seconds)
+    *   **Press Enter Action:** Simulate pressing the Enter key on the *last element* that had text injected into it. The key is `pressEnter`, the value is typically `true`.
+        *   `pressEnter=true`
+        *   *(Note: Compatibility for `pressEnter` varies significantly between websites.)*
+5.  **Combine Parameters:** Chain actions using `&`.
+    *   *Example:* Inject text, wait, then click a button by ID.
+        `https://www.example.com/?search-input=search-text-here&wait=500ms&submit-button=click`
+    *   *Example:* Click an ARIA-labeled element, inject text into another ARIA-labeled element, then press Enter.
+        `https://www.example.com/?css:[aria-label="Category"]=click&css:[aria-label="Keyword Input"]=search-text-here&pressEnter=true`
+
+*(Note: The extension automatically handles necessary URL encoding when appending parameters via right-click or reloading.)*
+
+### 3. Using the Generated URL (e.g., in Chrome Search Engines)
+
+Once you have the final URL (either copied after using right-click or manually crafted):
+
+1.  **Identify the Placeholder:** Locate the `search-text-here` value(s) in your URL. This is where your actual search query or input value will go.
+2.  **Go to Chrome Search Engine Settings:**
+    *   Navigate to `chrome://settings/searchEngines`.
+    *   Click "Add" next to "Site search".
+3.  **Configure the Search Engine:**
+    *   **Search engine:** Give it a descriptive name (e.g., "Example Site Search").
+    *   **Shortcut:** Assign a short keyword you'll type in the address bar (e.g., `exs`).
+    *   **URL with %s in place of query:** Paste your **copied/crafted URL** into this field. Then, **carefully replace** the `search-text-here` placeholder with `%s`.
+        *   *Example URL:* `https://www.example.com/?search-input=search-text-here&submit-button=click`
+        *   *Becomes:* `https://www.example.com/?search-input=%s&submit-button=click`
+    *   Click "Add".
+4.  **Use It:** Now, in your Chrome address bar, you can type your shortcut (e.g., `exs`), press `Space` or `Tab`, type your search query, and press `Enter`. Chrome will navigate to the constructed URL, and the extension (if the site is allowlisted) will execute the sequence, injecting your query into the correct place.
+
+## Troubleshooting / Limitations
+
+*   **Site Blocking:** Some websites (e.g., Realtor.com, Zillow.com) have strong anti-bot measures that may detect the rapid page reloads used by the right-click method, resulting in errors (`429 Too Many Requests`) or failed page loads. On these sites, you *must* use the Manual URL Crafting method and navigate to the final URL directly.
+*   **Dynamic Elements:** The extension tries its best to identify elements using `aria-label`, stable IDs, or unique classes. However, on highly dynamic websites or those using Shadow DOM, the selectors might not be stable or the extension might fail to find the element. Manual crafting using robust selectors found via DevTools is the best approach here.
+*   **`pressEnter` Compatibility:** Simulating keyboard events is not always reliable and may not work as expected on all websites due to their specific event handling.
+*   **Right-Click Target:** Sometimes right-clicking might target an overlay or container instead of the intended element. Try clicking more precisely on the interactive part. The extension uses `element.closest()` to try and find the nearest relevant element.
+*   **State Loss (Right-Click Method):** Remember that each step added via right-click reloads the page, losing any temporary state.
 
 ## License
 
