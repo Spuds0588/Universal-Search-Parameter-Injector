@@ -3,11 +3,20 @@
 <head>
     <title>Allowed URLs</title>
     <link rel="stylesheet" href="popup.css">
+    <meta charset="UTF-8"> <!-- Good practice -->
 </head>
 <body>
     <h1>Allowed Base URLs</h1>
-    <p>Add base URLs (e.g., <code>https://www.example.com/</code>) where the injector should run.</p>
+    <p>Manage base URLs (e.g., <code>https://www.example.com/</code>) where the injector should run.</p>
 
+    <!-- Add Current Site Button -->
+    <div class="add-current-site-section">
+        <button id="add-current-site-button" title="Adds the base URL (like https://www.example.com/) of the currently active tab">Add Current Site to Allowlist</button>
+    </div>
+    <!-- End Add Current Site Button -->
+
+
+    <h2>Add New URL Manually:</h2>
     <div class="add-url-section">
         <input type="text" id="new-url-input" placeholder="e.g., https://www.example.com/">
         <button id="add-url-button">Add</button>

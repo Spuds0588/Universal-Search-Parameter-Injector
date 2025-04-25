@@ -1,76 +1,125 @@
 /* popup.css */
 body {
-    font-family: sans-serif;
-    width: 350px; /* Adjust as needed */
-    padding: 10px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    width: 380px; /* Slightly wider for buttons */
+    padding: 15px;
     font-size: 14px;
+    color: #333;
 }
 
 h1, h2 {
     margin-top: 0;
     margin-bottom: 10px;
+    font-weight: 600;
+}
+
+h1 {
+    font-size: 1.3em;
+    text-align: center;
+    margin-bottom: 15px;
 }
 
 h2 {
    font-size: 1.1em;
+   margin-top: 20px; /* More space between sections */
+   border-bottom: 1px solid #eee;
+   padding-bottom: 5px;
 }
 
 p {
     margin-bottom: 15px;
     color: #555;
     font-size: 0.9em;
+    line-height: 1.4;
 }
 
 code {
-    background-color: #eee;
-    padding: 2px 4px;
-    border-radius: 3px;
+    background-color: #f0f0f0;
+    padding: 2px 5px;
+    border-radius: 4px;
     font-size: 0.95em;
+    color: #e83e8c; /* Bootstrap-like pink */
+}
+
+button {
+    cursor: pointer;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    padding: 6px 12px;
+    font-size: 0.95em;
+    transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+.add-current-site-section {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+#add-current-site-button {
+     padding: 8px 15px;
+     background-color: #28a745; /* Green */
+     color: white;
+     border-color: #28a745;
+}
+
+#add-current-site-button:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
 }
 
 .add-url-section {
     display: flex;
     margin-bottom: 15px;
+    gap: 5px; /* Add space between input and button */
 }
 
 #new-url-input {
     flex-grow: 1;
-    padding: 5px;
-    margin-right: 5px;
+    padding: 6px 10px;
     border: 1px solid #ccc;
-    border-radius: 3px;
+    border-radius: 4px;
+    font-size: 0.95em;
+}
+#new-url-input:focus {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
-#add-url-button, .remove-btn {
-    padding: 5px 10px;
+
+#add-url-button {
     background-color: #007bff;
     color: white;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 0.9em;
+    border-color: #007bff;
 }
 
-#add-url-button:hover, .remove-btn:hover {
+#add-url-button:hover {
     background-color: #0056b3;
+    border-color: #0056b3;
 }
 
 #url-list {
     list-style: none;
     padding: 0;
-    margin: 0;
-    max-height: 200px; /* Allow scrolling if list gets long */
+    margin: 10px 0 0 0;
+    max-height: 250px; /* Adjust height */
     overflow-y: auto;
-    border: 1px solid #eee;
-    border-radius: 3px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
 }
 
 #url-list li {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 10px;
+    padding: 8px 12px;
     border-bottom: 1px solid #eee;
+    font-size: 0.9em;
 }
 
 #url-list li:last-child {
@@ -78,29 +127,38 @@ code {
 }
 
 #url-list .url-text {
-    word-break: break-all; /* Prevent long URLs from overflowing */
+    word-break: break-all; /* Wrap long URLs */
     margin-right: 10px;
+    flex-grow: 1; /* Take available space */
+    color: #444;
 }
 
 .remove-btn {
-    background-color: #dc3545;
+    background-color: #dc3545; /* Red */
+    color: white;
+    border-color: #dc3545;
     flex-shrink: 0; /* Prevent button from shrinking */
+    padding: 4px 8px; /* Smaller padding */
+    font-size: 0.85em;
 }
 
 .remove-btn:hover {
     background-color: #c82333;
+    border-color: #bd2130;
 }
 
 #status-message {
     margin-top: 10px;
     font-size: 0.9em;
     min-height: 1.2em; /* Prevent layout shift */
+    text-align: center;
+    font-weight: 500;
 }
 
 #status-message.success {
-    color: green;
+    color: #28a745; /* Green */
 }
 
 #status-message.error {
-    color: red;
+    color: #dc3545; /* Red */
 }
