@@ -2,7 +2,7 @@
 
 // --- Constants ---
 const CLICK_ACTION_VALUE = 'click';
-const WAIT_TIMEOUT_MS = 7000;
+const WAIT_TIMEOUT_MS = 15000;
 const CSS_SELECTOR_PREFIX = "css:";
 const WAIT_PARAM_KEY = "wait";
 const PRESS_ENTER_PARAM_KEY = "pressenter"; // Use lowercase for key matching
