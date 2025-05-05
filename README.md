@@ -19,12 +19,12 @@ For security and control, the extension will only activate on websites whose bas
 *   **Flexible Element Identification:** Target elements using:
     *   ARIA Label (Often stable)
     *   Element ID (Ideal if stable)
-    *   Data Attributes (e.g., `data-testid`, `data-cy`)
+    *   Data Attributes (e.g., `data-testid`, `data-cy`, `data-qa`, `data-component`)
     *   Name Attribute (Common for forms)
     *   Placeholder Attribute (For inputs)
     *   CSS Class combinations
 *   **User-Managed Allowlist:** Extension only runs on sites you approve.
-*   **Right-Click URL Builder:** Incrementally build the action sequence URL by right-clicking elements on allowed pages (Note: This method reloads the page after each step).
+*   **Right-Click URL Builder:** Incrementally build the action sequence URL by right-clicking elements on allowed pages. Attempts to find the best stable identifier automatically. (Note: Reloads the page after each step).
 *   **Manual URL Crafting:** Full control for advanced users to write parameters directly.
 *   **Sequential Execution:** Parameters are processed in the order they appear in the URL.
 
@@ -67,16 +67,16 @@ This method lets you build the URL step-by-step directly on the page. **Importan
 
 1.  Ensure the website is **allowlisted**.
 2.  Navigate to the base page on the site where you want the actions to start.
-3.  **Right-click** on or near the first element you want to interact with (e.g., a search input field). The extension uses `.closest()` to find the nearest interactive element.
+3.  **Right-click** on or near the first element you want to interact with (e.g., a search input field). The extension uses `.closest()` to find the nearest relevant interactive element (`input`, `button`, `a`, etc.).
 4.  Choose the appropriate action from the context menu:
     *   **"Add to Injector: Set Value (search-text-here)"**: Select this for input fields, textareas, etc. It will add a parameter like `elementId=search-text-here` or `css:[aria-label...]=search-text-here` to the URL using the best identifier found.
     *   **"Add to Injector: Click Element"**: Select this for buttons, links, etc. It will add a parameter like `elementId=click` or `css:.selector=click`.
-5.  The extension attempts to identify the element uniquely using this priority order: `aria-label` -> stable `id` -> `data-testid` -> `name` -> `placeholder` -> stable `class` combination.
+5.  The extension attempts to identify the element uniquely using this priority order: `aria-label` -> stable `id` -> `data-testid` -> `data-cy`/`data-cypress` -> `data-qa`/`data-qa-id` -> `name` -> `placeholder` -> `data-component`/`data-element`/`data-target`/`data-action` -> stable `class` combination. Check the background DevTools console (via `chrome://extensions/`) for logs about which identifier was chosen if needed.
 6.  The page will **reload** with the new parameter added to the URL in the address bar.
 7.  **Repeat steps 3-6** for each subsequent element.
 8.  Once complete, **manually copy the final URL** from your address bar.
 
-*(Note: If the right-click method fails to find a unique, stable identifier, you may receive an alert. In these cases, use the Manual URL Crafting method.)*
+*(Note: If the right-click method fails to find a unique, stable identifier from the priority list, you may receive an alert. In these cases, use the Manual URL Crafting method.)*
 
 #### Method B: Manual URL Crafting (Advanced / More Control)
 
@@ -92,10 +92,10 @@ Construct the URL manually for precise control, especially if the right-click me
     *   **CSS Selector:** Use the prefix `css:` followed by a standard CSS selector. This is the **most flexible and recommended method** for complex sites.
         *   *ARIA Label:* `css:[aria-label="Label Text"]=search-text-here`
         *   *Data Test ID:* `css:[data-testid="main-search"]=search-text-here`
+        *   *Other Data Attributes:* `css:[data-cy="submit"]=click`, `css:[data-qa="login-button"]=click`, `css:[data-component="modal-close"]=click`
         *   *Name Attribute:* `css:[name="username"]=search-text-here`
         *   *Placeholder Attribute:* `css:[placeholder="Address, City, etc..."]=search-text-here`
         *   *Class:* `css:.order-button.primary=click`
-        *   *Other Attributes:* `css:[data-component="login-form"] [type="submit"]=click`
         *   *Structure:* `css:form#login > button[type='submit']=click`
         *   *Partial/Starts With:* `css:[id^="dynamic-prefix-"]=click`
 
@@ -133,10 +133,27 @@ Once you have the final URL:
 ## Troubleshooting / Limitations
 
 *   **Site Blocking:** Some websites may block the rapid page reloads from the right-click method (`429` errors). Manual URL crafting is necessary for such sites.
-*   **Dynamic Elements:** The extension tries its best, but highly dynamic sites or elements within Shadow DOM / iframes may require manual crafting with robust selectors (`aria-label`, `data-testid`, stable IDs) found via DevTools.
+*   **Dynamic Elements:** The extension tries its best, but highly dynamic sites or elements within Shadow DOM / iframes may require manual crafting with robust selectors (`aria-label`, `data-testid`, stable IDs) found via DevTools. The automatic identification priority is: `aria-label` > stable `id` > `data-testid` > `data-cy`/`data-cypress` > `data-qa`/`data-qa-id` > `name` > `placeholder` > `data-component`/`data-element`/`data-target`/`data-action` > stable `class` combination.
 *   **`pressEnter` Compatibility:** Highly variable depending on site implementation.
 *   **Right-Click Target:** Uses `element.closest()` to find interactive elements near the click. Manual crafting provides ultimate precision.
 *   **State Loss (Right-Click Method):** Each step reloads the page, losing temporary state.
+
+## Codebase Structure
+
+
+.
+├── background.js # Service worker (main logic, event handling, context menus, reload)
+├── content.js # Content script (parameter parsing, sequential execution, DOM interaction)
+├── listener.js # Content script (minimal listener for right-clicks)
+├── manifest.json # Extension configuration and permissions
+├── popup.css # Styles for the popup
+├── popup.html # HTML structure for the popup
+├── popup.js # Logic for the allowlist management popup
+├── README.md # This file (GitHub version)
+└── icons/ # Extension icons
+├── icon16.png
+├── icon48.png
+└── icon128.png
 
 ## License
 
@@ -164,3 +181,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+IGNORE_WHEN_COPYING_END
+IGNORE_WHEN_COPYING_START
+content_copy
+download
+Use code with caution.
+IGNORE_WHEN_COPYING_END
