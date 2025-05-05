@@ -140,29 +140,27 @@ Once you have the final URL:
 
 ## Codebase Structure
 
-
 .
-├── background.js # Service worker (main logic, event handling, context menus, reload)
-├── content.js # Content script (parameter parsing, sequential execution, DOM interaction)
-├── listener.js # Content script (minimal listener for right-clicks)
-├── manifest.json # Extension configuration and permissions
-├── popup.css # Styles for the popup
-├── popup.html # HTML structure for the popup
-├── popup.js # Logic for the allowlist management popup
-├── README.md # This file (GitHub version)
-└── icons/ # Extension icons
-├── icon16.png
-├── icon48.png
-└── icon128.png
+├── background.js         # Service worker (main logic, event handling, context menus, reload)
+├── content.js            # Content script (parameter parsing, sequential execution, DOM interaction)
+├── listener.js           # Content script (minimal listener for right-clicks)
+├── manifest.json         # Extension configuration and permissions
+├── popup.css             # Styles for the popup
+├── popup.html            # HTML structure for the popup
+├── popup.js              # Logic for the allowlist management popup
+├── README.md             # This file (GitHub version)
+└── icons/                # Extension icons
+    ├── icon16.png
+    ├── icon48.png
+    └── icon128.png
 
 ## License
 
 This project is licensed under the MIT License.
 
-```text
 MIT License
 
-Copyright (c) [Year] [Your Name/Organization]
+Copyright (c) 2025 Corey Burns
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -181,13 +179,4 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-IGNORE_WHEN_COPYING_END
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-IGNORE_WHEN_COPYING_END
+
