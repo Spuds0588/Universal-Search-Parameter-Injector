@@ -17,8 +17,11 @@ For security and control, the extension will only activate on websites whose bas
 *   **Wait Action:** Introduce timed pauses between actions.
 *   **Enter Keypress Simulation:** Simulate pressing the "Enter" key, typically after filling an input.
 *   **Flexible Element Identification:** Target elements using:
-    *   ARIA Label (Recommended for dynamic sites)
-    *   Element ID
+    *   ARIA Label (Often stable)
+    *   Element ID (Ideal if stable)
+    *   Data Attributes (e.g., `data-testid`, `data-cy`)
+    *   Name Attribute (Common for forms)
+    *   Placeholder Attribute (For inputs)
     *   CSS Class combinations
 *   **User-Managed Allowlist:** Extension only runs on sites you approve.
 *   **Right-Click URL Builder:** Incrementally build the action sequence URL by right-clicking elements on allowed pages (Note: This method reloads the page after each step).
@@ -64,71 +67,76 @@ This method lets you build the URL step-by-step directly on the page. **Importan
 
 1.  Ensure the website is **allowlisted**.
 2.  Navigate to the base page on the site where you want the actions to start.
-3.  **Right-click** on the first element you want to interact with (e.g., a search input field).
+3.  **Right-click** on or near the first element you want to interact with (e.g., a search input field). The extension uses `.closest()` to find the nearest interactive element.
 4.  Choose the appropriate action from the context menu:
-    *   **"Add to Injector: Set Value (search-text-here)"**: Select this for input fields, textareas, etc. where you want to inject text later. It will add a parameter like `elementId=search-text-here` or `css:[aria-label...]=search-text-here` to the URL.
+    *   **"Add to Injector: Set Value (search-text-here)"**: Select this for input fields, textareas, etc. It will add a parameter like `elementId=search-text-here` or `css:[aria-label...]=search-text-here` to the URL using the best identifier found.
     *   **"Add to Injector: Click Element"**: Select this for buttons, links, etc. It will add a parameter like `elementId=click` or `css:.selector=click`.
-5.  The extension will try to identify the element using `aria-label`, then ID, then CSS classes.
+5.  The extension attempts to identify the element uniquely using this priority order: `aria-label` -> stable `id` -> `data-testid` -> `name` -> `placeholder` -> stable `class` combination.
 6.  The page will **reload** with the new parameter added to the URL in the address bar.
-7.  **Repeat steps 3-6** for each subsequent element you want to interact with (e.g., right-click the submit button after adding the input parameter). The parameters will be added sequentially to the URL in the address bar.
-8.  Once you have added all the steps, **manually copy the final URL** from your address bar. This is the URL you will use (see Step 3 below).
+7.  **Repeat steps 3-6** for each subsequent element.
+8.  Once complete, **manually copy the final URL** from your address bar.
 
-*(Note: If the right-click method fails to identify an element, you may receive an alert, or it might silently fail. In these cases, you'll need to use the Manual URL Crafting method below.)*
+*(Note: If the right-click method fails to find a unique, stable identifier, you may receive an alert. In these cases, use the Manual URL Crafting method.)*
 
 #### Method B: Manual URL Crafting (Advanced / More Control)
 
-You can construct the URL manually, giving you precise control over selectors and actions. This is useful if the right-click method fails or if you prefer using specific CSS selectors found via DevTools (`F12` -> Inspect Element).
+Construct the URL manually for precise control, especially if the right-click method fails or if you need to target elements in specific ways using DevTools (`F12` -> Inspect Element).
 
 1.  Start with the base URL of the allowlisted site (e.g., `https://www.example.com/`).
 2.  Add a `?` to start the query parameters.
 3.  Add parameters in the format `key=value`, separated by `&`. The **order matters** - actions execute sequentially.
-4.  **Parameter Key Types:**
-    *   **Element ID:** Use the element's `id` directly as the key.
-        *   `https://www.example.com/?search-input=search-text-here`
-        *   `https://www.example.com/?submit-button=click`
-    *   **CSS Selector:** Use the prefix `css:` followed by a valid CSS selector. This is powerful for targeting elements without stable IDs or using attributes like `aria-label`.
-        *   *ARIA Label:* `css:[aria-label="Label Text"]=search-text-here` (Quotes inside the label value might need care, but often work).
-        *   *Class:* `css:.some-class.another-class=click`
-        *   *Attribute:* `css:[data-testid="main-search"]=search-text-here`
-        *   *Partial ID:* `css:[id^="dynamic-prefix-"]=click` (Targets ID starting with "dynamic-prefix-")
-    *   **Wait Action:** Introduce a pause. The key is `wait`. The value specifies duration (case-insensitive).
-        *   `wait=500ms` (Wait 500 milliseconds)
-        *   `wait=2s` (Wait 2 seconds)
-    *   **Press Enter Action:** Simulate pressing the Enter key on the *last element* that had text injected into it. The key is `pressEnter`, the value is typically `true`.
-        *   `pressEnter=true`
-        *   *(Note: Compatibility for `pressEnter` varies significantly between websites.)*
-5.  **Combine Parameters:** Chain actions using `&`.
-    *   *Example:* Inject text, wait, then click a button by ID.
-        `https://www.example.com/?search-input=search-text-here&wait=500ms&submit-button=click`
-    *   *Example:* Click an ARIA-labeled element, inject text into another ARIA-labeled element, then press Enter.
-        `https://www.example.com/?css:[aria-label="Category"]=click&css:[aria-label="Keyword Input"]=search-text-here&pressEnter=true`
+4.  **Parameter Key Types (Identifier = value/click):**
+    *   **Element ID:** Use the element's `id` directly if it's stable and unique.
+        *   `search-input=search-text-here`
+        *   `submit-button=click`
+    *   **CSS Selector:** Use the prefix `css:` followed by a standard CSS selector. This is the **most flexible and recommended method** for complex sites.
+        *   *ARIA Label:* `css:[aria-label="Label Text"]=search-text-here`
+        *   *Data Test ID:* `css:[data-testid="main-search"]=search-text-here`
+        *   *Name Attribute:* `css:[name="username"]=search-text-here`
+        *   *Placeholder Attribute:* `css:[placeholder="Address, City, etc..."]=search-text-here`
+        *   *Class:* `css:.order-button.primary=click`
+        *   *Other Attributes:* `css:[data-component="login-form"] [type="submit"]=click`
+        *   *Structure:* `css:form#login > button[type='submit']=click`
+        *   *Partial/Starts With:* `css:[id^="dynamic-prefix-"]=click`
 
-*(Note: The extension automatically handles necessary URL encoding when appending parameters via right-click or reloading.)*
+5.  **Special Action Parameters:**
+    *   **Wait Action:** Introduce a pause. Key: `wait`. Value: duration like `500ms` or `2s`.
+        *   `wait=500ms`
+        *   `wait=3s`
+    *   **Press Enter Action:** Simulate Enter key press on the *last successfully injected* input/textarea/contentEditable. Key: `pressEnter`. Value: typically `true`.
+        *   `pressEnter=true`
+        *   *(Note: Compatibility varies.)*
+6.  **Combine Parameters:** Chain actions using `&`.
+    *   *Example:* Inject using ID, wait, click using `data-testid`.
+        `https://www.example.com/?search-input=search-text-here&wait=500ms&css:[data-testid="submit-search"]=click`
+    *   *Example:* Click ARIA-label, inject into placeholder, press Enter.
+        `https://www.example.com/?css:[aria-label="Category"]=click&css:[placeholder="Keyword Search"]=search-text-here&pressEnter=true`
+
+*(Note: When manually crafting URLs with special characters in selectors (spaces, quotes, brackets, etc.), ensure they are properly URL-encoded if pasting directly into the address bar or using in contexts outside Chrome's search engine settings. The extension handles decoding correctly.)*
 
 ### 3. Using the Generated URL (e.g., in Chrome Search Engines)
 
-Once you have the final URL (either copied after using right-click or manually crafted):
+Once you have the final URL:
 
-1.  **Identify the Placeholder:** Locate the `search-text-here` value(s) in your URL. This is where your actual search query or input value will go.
-2.  **Go to Chrome Search Engine Settings:**
-    *   Navigate to `chrome://settings/searchEngines`.
-    *   Click "Add" next to "Site search".
-3.  **Configure the Search Engine:**
-    *   **Search engine:** Give it a descriptive name (e.g., "Example Site Search").
-    *   **Shortcut:** Assign a short keyword you'll type in the address bar (e.g., `exs`).
-    *   **URL with %s in place of query:** Paste your **copied/crafted URL** into this field. Then, **carefully replace** the `search-text-here` placeholder with `%s`.
-        *   *Example URL:* `https://www.example.com/?search-input=search-text-here&submit-button=click`
-        *   *Becomes:* `https://www.example.com/?search-input=%s&submit-button=click`
+1.  **Identify Placeholder:** Locate `search-text-here` value(s).
+2.  **Go to Chrome Search Engine Settings:** `chrome://settings/searchEngines`.
+3.  Click "Add" next to "Site search".
+4.  **Configure:**
+    *   **Search engine:** Descriptive name (e.g., "eBay Search Specific").
+    *   **Shortcut:** Short keyword (e.g., `ebs`).
+    *   **URL with %s in place of query:** Paste your URL. **Carefully replace** `search-text-here` with `%s`.
+        *   *Example URL:* `https://www.ebay.com/?css:[aria-label="Search for anything"]=search-text-here&pressEnter=true`
+        *   *Becomes:* `https://www.ebay.com/?css:[aria-label="Search for anything"]=%s&pressEnter=true`
     *   Click "Add".
-4.  **Use It:** Now, in your Chrome address bar, you can type your shortcut (e.g., `exs`), press `Space` or `Tab`, type your search query, and press `Enter`. Chrome will navigate to the constructed URL, and the extension (if the site is allowlisted) will execute the sequence, injecting your query into the correct place.
+5.  **Use:** Type your shortcut (`ebs`) in the address bar, press `Space` or `Tab`, type your query, press `Enter`. Chrome navigates, and the extension executes the sequence.
 
 ## Troubleshooting / Limitations
 
-*   **Site Blocking:** Some websites (e.g., Realtor.com, Zillow.com) have strong anti-bot measures that may detect the rapid page reloads used by the right-click method, resulting in errors (`429 Too Many Requests`) or failed page loads. On these sites, you *must* use the Manual URL Crafting method and navigate to the final URL directly.
-*   **Dynamic Elements:** The extension tries its best to identify elements using `aria-label`, stable IDs, or unique classes. However, on highly dynamic websites or those using Shadow DOM, the selectors might not be stable or the extension might fail to find the element. Manual crafting using robust selectors found via DevTools is the best approach here.
-*   **`pressEnter` Compatibility:** Simulating keyboard events is not always reliable and may not work as expected on all websites due to their specific event handling.
-*   **Right-Click Target:** Sometimes right-clicking might target an overlay or container instead of the intended element. Try clicking more precisely on the interactive part. The extension uses `element.closest()` to try and find the nearest relevant element.
-*   **State Loss (Right-Click Method):** Remember that each step added via right-click reloads the page, losing any temporary state.
+*   **Site Blocking:** Some websites may block the rapid page reloads from the right-click method (`429` errors). Manual URL crafting is necessary for such sites.
+*   **Dynamic Elements:** The extension tries its best, but highly dynamic sites or elements within Shadow DOM / iframes may require manual crafting with robust selectors (`aria-label`, `data-testid`, stable IDs) found via DevTools.
+*   **`pressEnter` Compatibility:** Highly variable depending on site implementation.
+*   **Right-Click Target:** Uses `element.closest()` to find interactive elements near the click. Manual crafting provides ultimate precision.
+*   **State Loss (Right-Click Method):** Each step reloads the page, losing temporary state.
 
 ## License
 
