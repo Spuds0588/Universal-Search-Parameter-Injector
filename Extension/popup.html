@@ -1,35 +1,58 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Allowed URLs</title>
+    <title>USPI Settings</title>
     <link rel="stylesheet" href="popup.css">
-    <meta charset="UTF-8"> <!-- Good practice -->
+    <meta charset="UTF-8">
 </head>
 <body>
-    <h1>Allowed Base URLs</h1>
-    <p>Manage base URLs (e.g., <code>https://www.example.com/</code>) where the injector should run.</p>
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-button active" data-tab="allowlist-tab">Allowlist</button>
+            <button class="tab-button" data-tab="sequence-builder-tab">Sequence Builder</button>
+        </div>
 
-    <!-- Add Current Site Button -->
-    <div class="add-current-site-section">
-        <button id="add-current-site-button" title="Adds the base URL (like https://www.example.com/) of the currently active tab">Add Current Site to Allowlist</button>
+        <!-- Allowlist Tab Content -->
+        <div id="allowlist-tab" class="tab-content active">
+            <h1>Allowlisted Base URLs</h1>
+            <p>Manage sites where the injector can run. Add the current site's base URL or enter one manually.</p>
+            <div class="add-current-site-section">
+                <button id="add-current-site-button" title="Adds the base URL of the active tab">Add Current Site</button>
+            </div>
+            <div class="add-url-section">
+                <input type="text" id="new-url-input" placeholder="e.g., https://www.example.com/">
+                <button id="add-url-button">Add URL</button>
+            </div>
+            <ul id="url-list"><li>Loading...</li></ul>
+        </div>
+
+        <!-- Sequence Builder Tab Content -->
+        <div id="sequence-builder-tab" class="tab-content">
+            <h1>Build Action Sequence</h1>
+            <p>Right-click elements on an allowed page and choose "Add to Sequence...". Then manage, reorder, and apply the sequence here.</p>
+            <div class="sequence-controls">
+                <button id="add-wait-step-button">Add Wait Step</button>
+                <button id="add-enter-step-button">Add Press Enter Step</button>
+            </div>
+            <ul id="sequence-list">
+                <!-- Sequence steps will be populated here -->
+                <li class="no-steps">No steps added yet. Right-click on a page to begin.</li>
+            </ul>
+            <div class="sequence-actions">
+                <button id="apply-sequence-button" class="primary-action">Apply & Reload Page</button>
+                <button id="copy-sequence-url-button">Copy Full URL</button>
+                <button id="clear-sequence-button" class="danger-action">Clear Sequence</button>
+            </div>
+            <div id="generated-url-container" style="display:none;">
+                <p><strong>Generated URL:</strong></p>
+                <textarea id="generated-url-output" rows="3" readonly></textarea>
+            </div>
+        </div>
+
+        <div id="status-message-container">
+            <div id="status-message"></div>
+        </div>
     </div>
-    <!-- End Add Current Site Button -->
-
-
-    <h2>Add New URL Manually:</h2>
-    <div class="add-url-section">
-        <input type="text" id="new-url-input" placeholder="e.g., https://www.example.com/">
-        <button id="add-url-button">Add</button>
-    </div>
-
-    <div id="status-message"></div>
-
-    <h2>Current List:</h2>
-    <ul id="url-list">
-        <!-- URLs will be added here by JavaScript -->
-        <li>Loading...</li>
-    </ul>
-
     <script src="popup.js"></script>
 </body>
 </html>
