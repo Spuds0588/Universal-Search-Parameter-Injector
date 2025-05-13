@@ -1,9 +1,9 @@
 /* popup.css */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-    width: 420px;
+    width: 420px; /* Wider for new UI */
     min-height: 300px;
-    padding: 0;
+    padding: 0; /* Remove body padding, use container padding */
     font-size: 14px;
     color: #333;
     background-color: #f9f9f9;
@@ -14,11 +14,11 @@ body {
     padding: 15px;
     display: flex;
     flex-direction: column;
-    height: 100%;
+    height: 100%; /* Make container take full popup height if possible */
 }
 
 h1 {
-    font-size: 1.2em;
+    font-size: 1.2em; /* Smaller h1 */
     font-weight: 600;
     text-align: center;
     margin-top: 0;
@@ -37,7 +37,7 @@ code {
     background-color: #e8e8e8;
     padding: 2px 5px;
     border-radius: 4px;
-    font-size: 0.9em;
+    font-size: 0.9em; /* Smaller code */
     color: #d63384;
 }
 
@@ -45,7 +45,7 @@ button {
     cursor: pointer;
     border-radius: 5px;
     border: 1px solid transparent;
-    padding: 8px 12px;
+    padding: 8px 12px; /* Consistent padding */
     font-size: 0.9em;
     transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
     font-weight: 500;
@@ -63,7 +63,7 @@ button.danger-action:hover { background-color: #bb2d3b; border-color: #b02a37; }
 .tabs { display: flex; margin-bottom: 15px; border-bottom: 1px solid #ddd; }
 .tab-button { flex: 1; padding: 10px; background-color: #f0f0f0; border: none; border-bottom: 3px solid transparent; border-radius: 5px 5px 0 0; font-weight: 500; color: #555; }
 .tab-button.active { background-color: #fff; border-bottom: 3px solid #007bff; color: #007bff; }
-.tab-content { display: none; padding-top: 10px; flex-grow: 1; overflow-y: auto; }
+.tab-content { display: none; padding-top: 10px; flex-grow: 1; /* Allow content to fill space */ overflow-y: auto; /* Scroll if content overflows */ }
 .tab-content.active { display: block; }
 
 /* Allowlist Specific */
@@ -86,39 +86,58 @@ button.danger-action:hover { background-color: #bb2d3b; border-color: #b02a37; }
 .sequence-controls { display: flex; justify-content: space-around; margin-bottom: 10px; gap: 10px; }
 .sequence-controls button { flex: 1; background-color: #e9ecef; border: 1px solid #ced4da; color: #495057;}
 .sequence-controls button:hover { background-color: #dde1e5; }
-#sequence-list { list-style-type: none; padding: 0; margin:0; max-height: 200px; /* Adjust as needed */ overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; background-color: #fff;}
+
+/* Inline Add Wait Form */
+.add-step-form {
+    background-color: #f8f9fa; /* Lighter background */
+    padding: 10px;
+    margin-bottom: 12px;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85em; /* Smaller font for form elements */
+}
+.add-step-form label {
+    font-weight: 500;
+    color: #495057;
+}
+.add-step-form input[type="number"] {
+    width: 60px;
+    padding: 5px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: inherit; /* Match surrounding font size */
+}
+.add-step-form select {
+    padding: 5px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: white;
+    font-size: inherit;
+}
+.add-step-form button {
+    padding: 5px 10px;
+    font-size: 0.95em; /* Slightly larger than form font */
+}
+#confirm-add-wait-button { background-color: #28a745; color: white; border-color: #28a745; }
+#confirm-add-wait-button:hover { background-color: #218838; }
+#cancel-add-wait-button { background-color: #6c757d; color: white; border-color: #6c757d; }
+#cancel-add-wait-button:hover { background-color: #5a6268; }
+
+
+#sequence-list { list-style-type: none; padding: 0; margin:0; max-height: 180px; /* Adjusted height */ overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; background-color: #fff;}
 #sequence-list li { padding: 6px 10px; border-bottom: 1px solid #eee; font-size: 0.85em; display: flex; flex-direction: column; gap: 4px; }
 #sequence-list li:last-child { border-bottom: none; }
-
 #sequence-list .step-main-line { display: flex; justify-content: space-between; align-items: center; }
+#sequence-list .step-number { font-weight: bold; margin-right: 6px; color: #0d6efd; flex-shrink: 0; } /* For numbering */
 #sequence-list .step-description { flex-grow: 1; word-break: break-all; color: #212529; }
-
-/* Step Action Buttons (Delete, Up, Down) */
-#sequence-list .step-actions {
-    display: flex; /* Align buttons in a row */
-    align-items: center;
-    gap: 5px; /* Space between buttons */
-    margin-left: 10px; /* Space from description */
-}
-#sequence-list .step-actions button {
-    background: none;
-    border: none;
-    padding: 2px 4px;
-    font-size: 1.2em; /* Slightly larger for better click target */
-    line-height: 1;
-    color: #6c757d; /* Default subtle color */
-}
-#sequence-list .step-actions button:hover {
-    color: #007bff; /* Blue on hover for up/down */
-}
-#sequence-list .step-actions button.delete-step-btn:hover {
-    color: #dc3545; /* Red on hover for delete */
-}
-#sequence-list .step-actions button:disabled { /* Style for disabled arrows */
-    color: #adb5bd;
-    cursor: not-allowed;
-}
-
+#sequence-list .step-actions { display: flex; align-items: center; gap: 5px; margin-left: 10px; flex-shrink: 0;}
+#sequence-list .step-actions button { background: none; border: none; padding: 2px 4px; font-size: 1.2em; line-height: 1; color: #6c757d; }
+#sequence-list .step-actions button:hover { color: #007bff; }
+#sequence-list .step-actions button.delete-step-btn:hover { color: #dc3545; }
+#sequence-list .step-actions button:disabled { color: #adb5bd; cursor: not-allowed; }
 #sequence-list .no-steps { text-align: center; color: #777; padding: 15px; }
 .step-select-container { margin-top: 5px; }
 .step-option-select { width: 100%; padding: 6px; font-size: 0.9em; border: 1px solid #ccc; border-radius: 4px; background-color: #fff;}

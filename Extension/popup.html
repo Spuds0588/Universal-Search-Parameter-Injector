@@ -29,13 +29,24 @@
         <!-- Sequence Builder Tab Content -->
         <div id="sequence-builder-tab" class="tab-content">
             <h1>Build Action Sequence</h1>
-            <p>Right-click elements on an allowed page and choose "Add to Sequence...". Then manage, reorder, and apply the sequence here.</p>
+            <p>Right-click elements on an allowed page and choose "Add to Sequence...". Manage, reorder, and apply the sequence here.</p>
             <div class="sequence-controls">
                 <button id="add-wait-step-button">Add Wait Step</button>
                 <button id="add-enter-step-button">Add Press Enter Step</button>
             </div>
+
+            <div id="add-wait-form-container" class="add-step-form" style="display:none;">
+                <label for="wait-duration-input">Duration:</label>
+                <input type="number" id="wait-duration-input" min="1" value="1">
+                <select id="wait-unit-select">
+                    <option value="s" selected>Seconds (s)</option>
+                    <option value="ms">Milliseconds (ms)</option>
+                </select>
+                <button id="confirm-add-wait-button">Add This Wait</button> <!-- Changed text for clarity -->
+                <button id="cancel-add-wait-button">Cancel</button>
+            </div>
+
             <ul id="sequence-list">
-                <!-- Sequence steps will be populated here -->
                 <li class="no-steps">No steps added yet. Right-click on a page to begin.</li>
             </ul>
             <div class="sequence-actions">
