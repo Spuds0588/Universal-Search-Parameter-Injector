@@ -4,147 +4,161 @@
 
 ## Overview
 
-This Chrome extension allows you to leverage functionality similar to Chrome's built-in custom search engines on virtually *any* website, even those that don't natively support it.
+Supercharge your browsing! Universal Search Parameter Injector lets you automate web page interactions like filling forms, clicking buttons, and more, simply by crafting special URLs. It's perfect for creating powerful custom search engine shortcuts in Chrome's Omnibox for *any* website, even those that don't natively support it.
 
-It works by letting you construct special URLs containing parameters that tell the extension which elements on a page to interact with (like input fields or buttons) and what actions to perform (like injecting text, clicking, waiting, or simulating an Enter key press). Actions are performed sequentially based on the order of parameters in the URL.
-
-For security and control, the extension will only activate on websites whose base URL you have explicitly added to an **Allowlist** via the extension's popup.
+The extension operates by processing command parameters in your URL sequentially. For security, it only activates on websites you explicitly add to an **Allowlist**.
 
 ## Key Features
 
-*   **Parameter Injection:** Inject text values into input fields, textareas, or contenteditable elements using URL parameters.
-*   **Click Simulation:** Simulate a click on buttons, links, or other elements.
-*   **Wait Action:** Introduce timed pauses between actions.
-*   **Enter Keypress Simulation:** Simulate pressing the "Enter" key, typically after filling an input.
-*   **Flexible Element Identification:** Target elements using:
-    *   ARIA Label (Often stable)
-    *   Element ID (Ideal if stable)
-    *   Data Attributes (e.g., `data-testid`, `data-cy`, `data-qa`, `data-component`)
-    *   Name Attribute (Common for forms)
-    *   Placeholder Attribute (For inputs)
-    *   CSS Class combinations
-*   **User-Managed Allowlist:** Extension only runs on sites you approve.
-*   **Right-Click URL Builder:** Incrementally build the action sequence URL by right-clicking elements on allowed pages. Attempts to find the best stable identifier automatically. (Note: Reloads the page after each step, *prepends* new parameter).
-*   **Manual URL Crafting:** Full control for advanced users to write parameters directly.
-*   **Sequential Execution:** Parameters are processed in the order they appear in the URL. **Automation parameters should come first.**
+*   **Multi-Step Automation:** Inject text, click elements, select dropdown options, add timed waits, and simulate Enter key presses.
+*   **Popup Sequence Builder:** A user-friendly interface to build, reorder, and manage multi-step action sequences.
+*   **Smart Element Identification (via Right-Click):**
+    *   Right-click an element on an allowed page to add it to your sequence.
+    *   Prioritizes stable identifiers: `aria-label` -> `id` -> `data-testid` -> `data-cy` / `data-cypress` -> `data-qa` / `data-qa-id` -> `name` -> `placeholder` -> various other `data-*` attributes (like `data-component`, `data-element`, `data-target`, `data-action`) -> CSS classes.
+*   **Flexible Manual Control:** Craft URLs directly for advanced targeting using element IDs or any CSS selector (including attributes like `placeholder`, `data-component`, etc.).
+*   **User-Managed Allowlist:** You control exactly which sites the extension can interact with.
+*   **Sequential Execution:** Actions are performed in the order defined in your sequence or URL.
 
 ## Installation
 
-1.  Download or clone the extension files/repository.
+**1. Recommended: Install from Chrome Web Store (Easiest & Automatic Updates)**
+
+*   Visit the official extension page:
+    [**Universal Search Parameter Injector on Chrome Web Store**](https://chromewebstore.google.com/detail/universal-search-paramete/mipgaemiejdnnaffeniniojohjidaklf)
+*   Click "Add to Chrome".
+
+**2. Alternative: Manual Installation (For Development / Testing)**
+
+1.  Download or clone this repository's files.
 2.  Open Google Chrome and navigate to `chrome://extensions/`.
-3.  Enable **"Developer mode"** using the toggle switch (usually in the top right corner).
-4.  Click the **"Load unpacked"** button.
-5.  Select the directory containing the extension files (`manifest.json`, etc.).
-6.  The extension icon should appear in your toolbar.
+3.  Enable **"Developer mode"** (toggle switch, usually top-right).
+4.  Click **"Load unpacked"**.
+5.  Select the directory containing the extension files (where `manifest.json` is located).
+6.  The extension icon will appear in your toolbar.
 
-## How it Works Conceptually
+## How it Works
 
-The extension monitors page loads on allowed websites. If the URL contains special query parameters that the extension recognizes, it waits for the page elements specified by those parameters to potentially load. It then attempts to perform the requested actions (injecting text, clicking, waiting, pressing Enter) in the sequence defined by the parameter order. **Crucially, the extension processes parameters from left to right in the URL.**
+1.  **Allowlist Sites:** Use the extension popup to add base URLs where you want to use the injector.
+2.  **Build a Sequence:**
+    *   **Right-Click + Popup:** Right-click an element on an allowlisted page, choose "Add to Injector Sequence...". The popup opens to the "Sequence Builder" tab, adding the identified element.
+    *   **Manage in Popup:**
+        *   For `<select>` elements (dropdowns), if you choose to "Set Value", the popup will fetch its options from the page, allowing you to pick the desired option directly in the popup.
+        *   Add "Wait" steps with a custom duration (ms or s) using the inline form.
+        *   Add "Press Enter" steps.
+        *   Reorder steps using up/down arrows. The first step will be marked "(Start)".
+        *   Delete steps.
+3.  **Apply or Copy URL:**
+    *   **"Apply & Reload Page":** The popup constructs a URL with your sequence parameters (automation parameters are placed first) and reloads the current page.
+    *   **"Copy Full URL":** Copies the generated URL to your clipboard for manual use or saving. An output box shows the generated URL.
+4.  **Execution:** When you navigate to a URL containing these special parameters (on an allowlisted site), `content.js` parses them and executes the actions in order, waiting for elements if necessary.
 
-## Usage Instructions
+## Using the Popup Sequence Builder
 
-### 1. Allowlisting Websites (Required)
+1.  **Access:**
+    *   Click the extension icon to open the popup. Navigate to the "Sequence Builder" tab.
+    *   Or, right-click an element on an allowlisted page and select "Add to Injector Sequence...". This will open the popup and add the first step.
+2.  **Adding Steps:**
+    *   **From Page:** Right-click elements on the page. The extension tries to find the best identifier and adds a step (click or set value `search-text-here`). For `<select>` elements where you intend to set a value, the popup will guide you to select the specific option after its options are fetched from the page.
+    *   **"Add Wait Step":** Click this in the popup. An inline form appears to enter duration and units (ms/s). Click "Add This Wait" to confirm.
+    *   **"Add Press Enter Step":** Adds a step to simulate pressing Enter (targets the last input field that received text).
+3.  **Managing Steps:**
+    *   Each step shows its action (e.g., "1. (Start) Inject 'search-text-here' into #search-input").
+    *   Use the **▲** and **▼** arrows to reorder steps.
+    *   Click the **✕** to delete a step.
+4.  **Generating the URL:**
+    *   **"Apply & Reload Page":** Constructs the URL with all automation parameters placed *first* and reloads the current tab.
+    *   **"Copy Full URL":** Generates the full URL with automation parameters first and copies it. An output box shows the generated URL.
+    *   **"Clear Sequence":** Deletes all steps for the current tab's sequence.
 
-Before the extension can work on a site, you must add its base URL to the allowlist.
+*(Sequences are stored per-tab locally and cleared when the browser session ends or when manually cleared).*
 
-1.  Navigate to the website you want to enable the extension for (e.g., `https://www.example.com/some/path`).
-2.  Click the **Universal Search Parameter Injector icon** in your Chrome toolbar to open the popup.
-3.  **Option A (Easiest):** Click the **"Add Current Site to Allowlist"** button. This will automatically extract the base URL (e.g., `https://www.example.com/`) and add it.
-4.  **Option B (Manual):** Enter the **base URL** (including `https://` or `http://` and preferably ending with a `/`, like `https://www.example.com/`) into the "Add New URL Manually" input field and click "Add".
-5.  The URL will appear in the "Current List". You can remove URLs using the "Remove" button next to them.
+## Manual URL Crafting (Advanced)
 
-### 2. Building the URL Sequence
+For maximum control or if the right-click method struggles, craft URLs manually.
 
-You can create the sequence of actions in two ways:
+**Key Rule:** Place **all** Universal Search Parameter Injector parameters at the **beginning** of the query string, *before* any parameters native to the website itself.
 
-#### Method A: Using Right-Click (Easier, With Reloads)
-
-This method lets you build the URL step-by-step directly on the page. **Important Note:** Each step added via right-click will **automatically reload the page** with the new automation parameter added to the **beginning** of the URL's query string. This provides immediate feedback but means:
-*   Any state on the page (like filled forms not yet submitted, or dynamically opened menus) will be lost on each reload.
-*   Some websites might have security measures that block rapid, automated reloads (like Realtor.com, Zillow.com), causing this method to fail with errors on those sites.
-
-**Steps:**
-
-1.  Ensure the website is **allowlisted**.
-2.  Navigate to the base page on the site where you want the actions to start (it can already have its own query parameters).
-3.  **Right-click** on or near the first element you want to interact with. The extension uses `.closest()` to find the nearest relevant interactive element.
-4.  Choose the appropriate action from the context menu ("Set Value" or "Click Element").
-5.  The extension attempts to identify the element uniquely (priority: `aria-label` -> `id` -> `data-testid` -> `data-cy` -> `data-qa` -> `name` -> `placeholder` -> `data-*` -> `class`).
-6.  The page will **reload** with the new automation parameter **prepended** to the query string in the address bar.
-7.  **Repeat steps 3-6** for each subsequent element. Each new parameter will be added *before* the previous ones and any original site parameters.
-8.  Once complete, **manually copy the final URL** from your address bar. The automation parameters should be at the beginning.
-
-*(Note: If the right-click method fails to find a unique, stable identifier, you may receive an alert. Use Manual URL Crafting instead.)*
-
-#### Method B: Manual URL Crafting (Advanced / More Control)
-
-Construct the URL manually for precise control. This is the recommended method for complex sequences or sites sensitive to reloads.
-
-**VERY IMPORTANT:** Place **all** Universal Search Parameter Injector parameters (`css:`, `id`, `wait`, `pressEnter`) at the **beginning** of the query string, *before* any parameters used by the website itself. This prevents delays and ensures correct execution order.
-
-1.  Start with the base URL of the allowlisted site (e.g., `https://www.example.com/`).
-2.  Add a `?` to start the query parameters.
-3.  **Add ALL your automation parameters first**, separated by `&`.
-4.  *Then*, if the site needs its own parameters, add `&` followed by the site's native parameters (e.g., `&sort=price&filter=active`).
-5.  **Parameter Key Types (Identifier = value/click):**
+1.  Start with the base URL (e.g., `https://www.example.com/`).
+2.  Add `?`.
+3.  Add **your automation parameters first**, separated by `&`.
+4.  If needed, add `&` then the site's native parameters (e.g., `&siteParam=value`).
+5.  **Parameter Types:**
     *   **Element ID:** `search-input=search-text-here`, `submit-button=click`
     *   **CSS Selector:** Prefix with `css:`. Most flexible method.
-        *   *ARIA Label:* `css:[aria-label="Label Text"]=search-text-here`
-        *   *Data Test ID:* `css:[data-testid="main-search"]=search-text-here`
-        *   *Other Data Attributes:* `css:[data-cy="submit"]=click`, `css:[data-qa="login-button"]=click`
-        *   *Name:* `css:[name="username"]=search-text-here`
-        *   *Placeholder:* `css:[placeholder="Address, City..."]=search-text-here`
-        *   *Class:* `css:.order-button.primary=click`
+        *   *ARIA Label:* `css:[aria-label="Search"]=search-text-here`
+        *   *Data Test ID:* `css:[data-testid="login-btn"]=click`
+        *   *Other Common Data Attributes:*
+            *   `css:[data-cy="submit-button"]=click`
+            *   `css:[data-qa="login-field"]=search-text-here`
+            *   `css:[data-component="modal-dialog"] [data-element="close-button"]=click` (Combining data attributes)
+            *   `css:[data-target="nav.menu"]=click`
+            *   `css:[data-action="openProfile"]=click`
+        *   *Name Attribute:* `css:[name="username"]=your_user`
+        *   *Placeholder Attribute:* `css:[placeholder="Enter city..."]=search-text-here`
+        *   *Class:* `css:.main-nav > li:nth-child(2) > a=click`
         *   *Structure:* `css:form#login > button[type='submit']=click`
-        *   *Partial:* `css:[id^="dynamic-prefix-"]=click`
+        *   *Partial/Starts With:* `css:[id^="dynamic-prefix-"]=click`
+    *   **Wait:** `wait=500ms` or `wait=3s`
+    *   **Press Enter:** `pressEnter=true` (acts on last injected input)
+6.  **Example (Automation First):**
+    `https://example.com/search?css:[placeholder="Search term"]=myquery&pressEnter=true&wait=1s&css:button.filter=click&nativeFilter=true&page=1`
 
-6.  **Special Action Parameters:**
-    *   `wait=<duration>` (e.g., `wait=500ms`, `wait=1s`)
-    *   `pressEnter=true` (Use after an input injection)
-7.  **Combine Parameters (Automation First!):**
-    *   *Correct:* `https://example.com/search?search-input=query&submit-btn=click&sort=relevant&filter=new`
-    *   *Incorrect (Slow):* `https://example.com/search?sort=relevant&filter=new&search-input=query&submit-btn=click`
-    *   *Example with Wait & ARIA:* `https://example.com/products?css:[aria-label="Filters"]=click&wait=1s&css:[aria-label="Color"]=click&category=shoes`
+## Using with Chrome Custom Search Engines
 
-*(Note: Ensure special characters in manually crafted selectors are URL-encoded if needed.)*
-
-### 3. Using the Generated URL (e.g., in Chrome Search Engines)
-
-Once you have the final URL (with automation parameters correctly placed first):
-
-1.  Identify `search-text-here` value(s).
-2.  Go to `chrome://settings/searchEngines`, click "Add" site search.
-3.  Configure:
-    *   **Search engine:** Name (e.g., "Arive Rule Search").
-    *   **Shortcut:** Keyword (e.g., `ars`).
-    *   **URL with %s...:** Paste your URL. Replace `search-text-here` with `%s`.
-        *   *Example:* `https://umortgage.myarive.com/app/settings/automation-rules?css:[placeholder="Search Rule Name or ID"]=search-text-here&pressEnter=true`
-        *   *Becomes:* `https://umortgage.myarive.com/app/settings/automation-rules?css:[placeholder="Search Rule Name or ID"]=%s&pressEnter=true`
-    *   Click "Add".
-4.  Use: Type shortcut (`ars`), space/tab, query, Enter.
+1.  Build/craft your final URL with automation parameters first.
+2.  Replace the placeholder value (e.g., `search-text-here`) with `%s`.
+3.  Go to `chrome://settings/searchEngines` -> "Site search" -> "Add".
+4.  Fill in:
+    *   Search engine: (e.g., "My Site Automated Search")
+    *   Shortcut: (e.g., `mys`)
+    *   URL with %s... : Paste your modified URL.
+5.  Now, type `mys yourquery` in the Omnibox!
 
 ## Troubleshooting / Limitations
 
-*   **Parameter Order is Crucial:** Automation parameters **must** come before native site parameters in the URL for reliable and fast execution.
-*   **Site Blocking:** Some sites may block the rapid reloads from the right-click method. Use manual crafting.
-*   **Dynamic Elements:** Manual crafting using robust selectors (`aria-label`, `data-testid`, stable IDs) found via DevTools is recommended for complex sites.
-*   **`pressEnter` Compatibility:** Highly variable.
-*   **Right-Click Target:** Uses `element.closest()`. Manual crafting offers precision.
-*   **State Loss (Right-Click Method):** Each step reloads the page.
+*   **Parameter Order:** Automation parameters **must** be first in the URL for reliable and fast execution.
+*   **Site Blocking / `429` Errors:** Some sites block rapid automated interactions/reloads. The "Apply & Reload" or right-click method might fail. Manually crafting the full URL and navigating once is more robust for these sites.
+*   **Dynamic Elements:** While the extension tries hard, manual CSS selectors are best for highly dynamic sites or elements in Shadow DOM/iframes. The automatic identification priority is: `aria-label` > stable `id` > `data-testid` > `data-cy`/`data-cypress` > `data-qa`/`data-qa-id` > `name` > `placeholder` > other common `data-*` attributes > stable `class` combination.
+*   **`pressEnter` Reliability:** Varies greatly by site.
+*   **Right-Click Target:** Uses `element.closest()` to find interactive elements near the click. Manual crafting offers precision.
 
 ## Codebase Structure
-
-```text
-.
-├── background.js         # Service worker (main logic, event handling, context menus, reload)
-├── content.js            # Content script (parameter parsing, sequential execution, DOM interaction)
-├── listener.js           # Content script (minimal listener for right-clicks)
-├── manifest.json         # Extension configuration and permissions
-├── popup.css             # Styles for the popup
-├── popup.html            # HTML structure for the popup
-├── popup.js              # Logic for the allowlist management popup
+```
+├── background.js         # Service worker (main logic, context menus, URL construction)
+├── content.js            # Content script (parameter parsing, DOM interaction)
+├── listener.js           # Content script (right-click listener)
+├── manifest.json         # Extension configuration
+├── popup.html            # Popup UI (tabs, allowlist, sequence builder)
+├── popup.css             # Popup styles
+├── popup.js              # Popup logic (allowlist, sequence UI, messaging)
 ├── README.md             # This file (GitHub version)
 └── icons/                # Extension icons
     ├── icon16.png
     ├── icon48.png
     └── icon128.png
+```
+License
+
+This project is licensed under the MIT License.
+
+MIT License
+
+Copyright (c) 2025 Burns Development
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
