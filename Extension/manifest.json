@@ -1,14 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Universal Search Parameter Injector",
-  "version": "1.5", // Increment version
-  "description": "Injects URL parameters into page elements. Build URL sequences via popup. Runs on allowlisted sites only.", // Updated description
+  "version": "1.5",
+  "description": "Injects URL parameters into page elements. Build URL sequences via popup. Runs on allowlisted sites only.",
   "permissions": [
-    "storage",        // For allowlist and potentially sequence-in-progress
+    "storage",
     "scripting",
     "tabs",
     "contextMenus"
-    // "session" // Optional, storage permission usually covers chrome.storage.session
   ],
   "host_permissions": [
     "<all_urls>"
@@ -17,7 +16,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html", // This will now serve dual purpose
+    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png"

@@ -1,14 +1,12 @@
-// popup.js V3 - Tabbed UI with Sequence Builder
+// popup.js V3.1 - Fix rendering, Add Select Option Prompting
 
-// --- Allowlist Constants & Elements ---
 const ALLOWLIST_STORAGE_KEY = 'allowedBaseUrls';
-const urlInput = document.getElementById('new-url-input');
-const addButton = document.getElementById('add-url-button');
-const addCurrentSiteButton = document.getElementById('add-current-site-button');
-const urlListElement = document.getElementById('url-list');
+const allowlistUrlInput = document.getElementById('new-url-input');
+const addAllowlistUrlButton = document.getElementById('add-url-button');
+const addCurrentSiteToAllowlistButton = document.getElementById('add-current-site-button');
+const allowlistUrlListElement = document.getElementById('url-list');
 
-// --- Sequence Builder Constants & Elements ---
-const SEQUENCE_STORAGE_KEY_PREFIX = 'uspi_sequence_tab_'; // Key by tab ID
+const SEQUENCE_STORAGE_KEY_PREFIX = 'uspi_sequence_tab_';
 const sequenceListElement = document.getElementById('sequence-list');
 const addWaitStepButton = document.getElementById('add-wait-step-button');
 const addEnterStepButton = document.getElementById('add-enter-step-button');
@@ -18,15 +16,13 @@ const clearSequenceButton = document.getElementById('clear-sequence-button');
 const generatedUrlOutput = document.getElementById('generated-url-output');
 const generatedUrlContainer = document.getElementById('generated-url-container');
 
-// --- General Elements ---
 const statusMessageElement = document.getElementById('status-message');
 const tabButtons = document.querySelectorAll('.tab-button');
 const tabContents = document.querySelectorAll('.tab-content');
 
-let currentTabId = null; // To store the active tab ID for sequence operations
-let currentTabUrl = null; // To store the active tab's base URL for sequence operations
+let currentTabId = null;
+let currentTabUrlForSequence = null; // Base URL of the active tab for sequence URL generation
 
-// --- General Helper: Display Status Message ---
 function displayStatus(message, isError = false, duration = 3000) {
     statusMessageElement.textContent = message;
     statusMessageElement.className = isError ? 'error' : 'success';
@@ -39,56 +35,47 @@ function displayStatus(message, isError = false, duration = 3000) {
     }
 }
 
-// --- Tab Switching Logic ---
 tabButtons.forEach(button => {
     button.addEventListener('click', () => {
         tabButtons.forEach(btn => btn.classList.remove('active'));
         tabContents.forEach(content => content.classList.remove('active'));
         button.classList.add('active');
         document.getElementById(button.dataset.tab).classList.add('active');
-        displayStatus("", false, 0); // Clear status on tab switch
-        // If switching to sequence builder, refresh its content
+        displayStatus("", false, 0);
         if (button.dataset.tab === "sequence-builder-tab") {
             loadSequenceForCurrentTab();
         }
     });
 });
 
-// --- Allowlist Logic (Mostly from previous version) ---
-function renderUrlList(urls) { /* ... same as v2.x ... */
-    urlListElement.innerHTML = ''; if (!urls || urls.length === 0) { const li = document.createElement('li'); li.textContent = 'No URLs added yet.'; li.style.textAlign = 'center'; li.style.color = '#777'; urlListElement.appendChild(li); return; }
-    urls.forEach(url => { const li = document.createElement('li'); const span = document.createElement('span'); span.className = 'url-text'; span.textContent = url; span.title = url; const btn = document.createElement('button'); btn.textContent = 'Remove'; btn.className = 'remove-btn'; btn.dataset.url = url; li.appendChild(span); li.appendChild(btn); urlListElement.appendChild(li); });
+function renderUrlList(urls) {
+    allowlistUrlListElement.innerHTML = ''; if (!urls || urls.length === 0) { const li = document.createElement('li'); li.textContent = 'No URLs added yet.'; li.style.textAlign = 'center'; li.style.color = '#777'; allowlistUrlListElement.appendChild(li); return; }
+    urls.forEach(url => { const li = document.createElement('li'); const span = document.createElement('span'); span.className = 'url-text'; span.textContent = url; span.title = url; const btn = document.createElement('button'); btn.textContent = 'Remove'; btn.className = 'remove-btn'; btn.dataset.url = url; li.appendChild(span); li.appendChild(btn); allowlistUrlListElement.appendChild(li); });
 }
-async function loadAllowlistUrls() { /* ... same as v2.x loadUrls ... */
-    try { const data = await chrome.storage.sync.get({ [ALLOWLIST_STORAGE_KEY]: [] }); const urls = data[ALLOWLIST_STORAGE_KEY]; if (Array.isArray(urls)) { renderUrlList(urls); } else { renderUrlList([]); } } catch (e) { displayStatus("Error loading allowlist.", true, 0); renderUrlList([]); }
+async function loadAllowlistUrls() {
+    try { const data = await chrome.storage.sync.get({ [ALLOWLIST_STORAGE_KEY]: [] }); const urls = data[ALLOWLIST_STORAGE_KEY]; if (Array.isArray(urls)) { renderUrlList(urls); } else { renderUrlList([]); } } catch (e) { console.error("Allowlist load error:", e); displayStatus("Error loading allowlist.", true, 0); renderUrlList([]); }
 }
-async function removeAllowlistUrl(urlToRemove) { /* ... same as v2.x removeUrl ... */
-    if (!urlToRemove) return; displayStatus('', false); try { const data = await chrome.storage.sync.get({ [ALLOWLIST_STORAGE_KEY]: [] }); let urls = data[ALLOWLIST_STORAGE_KEY]; if (!Array.isArray(urls)) urls = []; const initialLength = urls.length; const updatedUrls = urls.filter(url => url !== urlToRemove); if (updatedUrls.length < initialLength) { await chrome.storage.sync.set({ [ALLOWLIST_STORAGE_KEY]: updatedUrls }); renderUrlList(updatedUrls); displayStatus(`URL "${urlToRemove}" removed.`, false); } } catch (e) { displayStatus("Error removing URL.", true); }
+async function removeAllowlistUrl(urlToRemove) {
+    if (!urlToRemove) return; displayStatus('', false); try { const data = await chrome.storage.sync.get({ [ALLOWLIST_STORAGE_KEY]: [] }); let urls = data[ALLOWLIST_STORAGE_KEY]; if (!Array.isArray(urls)) urls = []; const initialLength = urls.length; const updatedUrls = urls.filter(url => url !== urlToRemove); if (updatedUrls.length < initialLength) { await chrome.storage.sync.set({ [ALLOWLIST_STORAGE_KEY]: updatedUrls }); renderUrlList(updatedUrls); displayStatus(`URL "${urlToRemove}" removed.`, false); } } catch (e) { console.error("Allowlist remove error:", e); displayStatus("Error removing URL.", true); }
 }
-async function addAllowlistUrl(urlToAdd) { /* ... same as v2.x addUrl, normalized for base URL ... */
-    displayStatus('', false); let newUrl = urlToAdd.trim(); if (!newUrl) { displayStatus("URL empty.", true); return; }
-    if (!newUrl.startsWith('http://') && !newUrl.startsWith('https://')) { newUrl = 'https://' + newUrl; if (!newUrl.includes('.')) { displayStatus("Invalid URL.", true); return; } /* displayStatus(`Prepended "https://". Add if correct: ${newUrl}`, false, 5000); urlInput.value = newUrl; return; */ }
+async function addAllowlistUrl(urlToAdd) {
+    displayStatus('', false); let newUrl = urlToAdd.trim(); if (!newUrl) { displayStatus("URL cannot be empty.", true); return; }
+    if (!newUrl.startsWith('http://') && !newUrl.startsWith('https://')) {
+        newUrl = 'https://' + newUrl;
+        if (!newUrl.includes('.')) { displayStatus("Invalid URL format.", true); return; }
+    }
     try { const urlObject = new URL(newUrl); newUrl = `${urlObject.origin}/`; } catch (e) { displayStatus("Invalid URL format.", true); return; }
-    try { const data = await chrome.storage.sync.get({ [ALLOWLIST_STORAGE_KEY]: [] }); let urls = data[ALLOWLIST_STORAGE_KEY]; if (!Array.isArray(urls)) urls = []; if (urls.includes(newUrl)) { displayStatus(`URL "${newUrl}" already exists.`, true); return; } urls.push(newUrl); urls.sort(); await chrome.storage.sync.set({ [ALLOWLIST_STORAGE_KEY]: urls }); renderUrlList(urls); urlInput.value = ''; displayStatus(`URL "${newUrl}" added.`, false); } catch (e) { displayStatus("Error saving URL.", true); }
+    try { const data = await chrome.storage.sync.get({ [ALLOWLIST_STORAGE_KEY]: [] }); let urls = data[ALLOWLIST_STORAGE_KEY]; if (!Array.isArray(urls)) urls = []; if (urls.includes(newUrl)) { displayStatus(`URL "${newUrl}" already in list.`, false); return; } urls.push(newUrl); urls.sort(); await chrome.storage.sync.set({ [ALLOWLIST_STORAGE_KEY]: urls }); renderUrlList(urls); allowlistUrlInput.value = ''; displayStatus(`URL "${newUrl}" added.`, false); } catch (e) { console.error("Allowlist add error:", e); displayStatus("Error saving URL.", true); }
 }
-async function handleAddCurrentSiteToAllowlist() { /* ... same as v2.x handleAddCurrentSite ... */
-    displayStatus('', false); try { const tabs = await chrome.tabs.query({ active: true, currentWindow: true }); if (tabs && tabs.length > 0) { const tab = tabs[0]; if (tab.url && tab.url.startsWith('http')) { const urlObject = new URL(tab.url); addAllowlistUrl(`${urlObject.origin}/`); } else { displayStatus("Invalid site URL.", true); } } else { displayStatus("Cannot get tab.", true); } } catch (e) { displayStatus("Error getting tab URL.", true); }
+async function handleAddCurrentSiteToAllowlist() {
+    displayStatus('', false); try { const tabs = await chrome.tabs.query({ active: true, currentWindow: true }); if (tabs && tabs.length > 0) { const tab = tabs[0]; if (tab.url && tab.url.startsWith('http')) { const urlObject = new URL(tab.url); addAllowlistUrl(`${urlObject.origin}/`); } else { displayStatus("Current site has invalid URL.", true); } } else { displayStatus("Cannot get current tab.", true); } } catch (e) { console.error("Add current site error:", e); displayStatus("Error getting current tab URL.", true); }
 }
 
-
-// --- Sequence Builder Logic ---
-function getSequenceStorageKey(tabId) {
-    return `${SEQUENCE_STORAGE_KEY_PREFIX}${tabId}`;
-}
+function getSequenceStorageKey(tabId) { return `${SEQUENCE_STORAGE_KEY_PREFIX}${tabId}`; }
 
 async function loadSequenceForCurrentTab() {
-    if (!currentTabId) {
-        renderSequence([]); // Or show a message like "No active tab for sequence"
-        sequenceListElement.innerHTML = '<li class="no-steps">Activate a tab to build its sequence.</li>';
-        return;
-    }
+    if (!currentTabId) { renderSequence([]); sequenceListElement.innerHTML = '<li class="no-steps">Activate a web page tab to build its sequence.</li>'; return; }
     const key = getSequenceStorageKey(currentTabId);
-    // Using chrome.storage.local for sequence as it might be larger and session is better
     const data = await chrome.storage.local.get({ [key]: [] });
     renderSequence(data[key] || []);
 }
@@ -97,197 +84,224 @@ async function saveSequenceForCurrentTab(sequence) {
     if (!currentTabId) return;
     const key = getSequenceStorageKey(currentTabId);
     await chrome.storage.local.set({ [key]: sequence });
-    renderSequence(sequence); // Re-render after saving
+    renderSequence(sequence);
 }
 
 function renderSequence(sequence) {
     sequenceListElement.innerHTML = '';
-    generatedUrlContainer.style.display = 'none'; // Hide generated URL by default
-    generatedUrlOutput.value = '';
+    generatedUrlContainer.style.display = 'none'; generatedUrlOutput.value = '';
 
-    if (!sequence || sequence.length === 0) {
-        sequenceListElement.innerHTML = '<li class="no-steps">No steps yet. Right-click on an allowed page element and choose "Add to Sequence..."</li>';
+    if (!Array.isArray(sequence) || sequence.length === 0) {
+        sequenceListElement.innerHTML = '<li class="no-steps">No steps yet. Right-click on an allowed page element &rarr; "Add to Sequence..."</li>';
         return;
     }
 
     sequence.forEach((step, index) => {
         const li = document.createElement('li');
-        li.dataset.index = index; // For drag/drop or reordering later if implemented
+        li.dataset.index = index;
 
-        const handle = document.createElement('span');
-        handle.className = 'drag-handle';
-        handle.textContent = '☰'; // Simple drag handle, no actual drag yet
-        // li.appendChild(handle); // Add if/when drag implemented
+        const mainLineDiv = document.createElement('div');
+        mainLineDiv.className = 'step-main-line';
 
-        const desc = document.createElement('span');
-        desc.className = 'step-description';
-        if (step.type === 'inject') {
-            desc.textContent = `Inject "${step.value}" into ${step.identifier}`;
-        } else if (step.type === 'click') {
-            desc.textContent = `Click ${step.identifier}`;
-        } else if (step.type === 'wait') {
-            desc.textContent = `Wait for ${step.value}`;
-        } else if (step.type === 'pressEnter') {
-            desc.textContent = `Press Enter`;
+        const descSpan = document.createElement('span');
+        descSpan.className = 'step-description';
+        let displayText = step.description || 'Step detail missing'; // Fallback
+
+        if (step.actionType === 'inject') {
+            if (step.elementType === 'SELECT') {
+                displayText = `Select option in ${step.description || step.fullIdentifier}`;
+                if (step.optionsFetched && step.value !== undefined && step.value !== '') { // Show chosen value if available
+                     const selectedOption = (step.selectOptions || []).find(opt => opt.value === step.value);
+                     displayText = `Select "${selectedOption ? selectedOption.text.substring(0,20)+'...' : step.value}" in ${step.description || step.fullIdentifier}`;
+                } else if (!step.optionsFetched) {
+                    displayText = `Set value for SELECT ${step.description || step.fullIdentifier} (loading options...)`;
+                }
+            } else {
+                displayText = `Inject "${step.value}" into ${step.description || step.fullIdentifier}`;
+            }
+        } else if (step.actionType === 'click') {
+            displayText = `Click ${step.description || step.fullIdentifier}`;
+        } else if (step.command === 'wait') {
+            displayText = `Wait for ${step.value}`;
+        } else if (step.command === 'pressEnter') {
+            displayText = `Press Enter`;
         }
-        li.appendChild(desc);
+        descSpan.textContent = displayText;
+        descSpan.title = `Full ID: ${step.fullIdentifier || 'N/A'}\nAction: ${step.actionType || step.command}\nValue: ${step.value}`;
+        mainLineDiv.appendChild(descSpan);
 
-        const actions = document.createElement('div');
-        actions.className = 'step-actions';
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'step-actions';
         const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = '✕'; // '✖' or '🗑️'
+        deleteBtn.innerHTML = '&#x2715;'; // HTML entity for X
         deleteBtn.title = "Delete step";
-        deleteBtn.addEventListener('click', async () => {
-            sequence.splice(index, 1);
-            await saveSequenceForCurrentTab(sequence);
-        });
-        actions.appendChild(deleteBtn);
-        li.appendChild(actions);
+        deleteBtn.addEventListener('click', async (e) => { e.stopPropagation(); sequence.splice(index, 1); await saveSequenceForCurrentTab(sequence); });
+        actionsDiv.appendChild(deleteBtn);
+        mainLineDiv.appendChild(actionsDiv);
+        li.appendChild(mainLineDiv);
 
+        // If it's a SELECT element for injection, add its specific UI
+        if (step.elementType === 'SELECT' && step.actionType === 'inject') {
+            const selectContainer = document.createElement('div');
+            selectContainer.className = 'step-select-container';
+            if (!step.optionsFetched) {
+                selectContainer.textContent = 'Fetching options...';
+            } else {
+                createSelectWithOptionsUI(selectContainer, step, index, sequence);
+            }
+            li.appendChild(selectContainer);
+        }
         sequenceListElement.appendChild(li);
     });
 }
 
-async function addStepToSequence(step) {
-    if (!currentTabId) {
-        displayStatus("No active tab to add sequence step.", true);
-        return;
+function createSelectWithOptionsUI(container, step, index, sequence) {
+    container.innerHTML = '';
+    const selectEl = document.createElement('select');
+    selectEl.className = 'step-option-select';
+    let foundSelected = false;
+
+    if (step.selectOptions && step.selectOptions.length > 0) {
+        step.selectOptions.forEach(opt => {
+            const optionEl = document.createElement('option');
+            optionEl.value = opt.value;
+            optionEl.textContent = opt.text.length > 40 ? opt.text.substring(0, 37) + '...' : opt.text;
+            optionEl.title = opt.text;
+            if (opt.value === step.value) {
+                optionEl.selected = true;
+                foundSelected = true;
+            }
+            selectEl.appendChild(optionEl);
+        });
+        // If step.value was not among options (e.g. first load), select the first option
+        if (!foundSelected && step.selectOptions.length > 0 && (step.value === undefined || step.value === '')) {
+             selectEl.selectedIndex = 0;
+             sequence[index].value = step.selectOptions[0].value; // Update sequence data
+        }
+
+    } else {
+        const optionEl = document.createElement('option'); optionEl.value = ""; optionEl.textContent = "No options found";
+        selectEl.appendChild(optionEl);
     }
-    const key = getSequenceStorageKey(currentTabId);
-    const data = await chrome.storage.local.get({ [key]: [] });
-    const sequence = data[key] || [];
-    sequence.push(step);
-    await saveSequenceForCurrentTab(sequence);
-    displayStatus("Step added to sequence.", false, 1500);
+    selectEl.addEventListener('change', async (e) => { sequence[index].value = e.target.value; await saveSequenceForCurrentTab(sequence); });
+    container.appendChild(selectEl);
 }
 
-// Handlers for adding special steps
-addWaitStepButton.addEventListener('click', () => {
-    const duration = prompt("Enter wait duration (e.g., 500ms, 2s):", "1s");
-    if (duration) { // Basic validation could be added here
-        addStepToSequence({ type: 'special', command: 'wait', value: duration, identifier: 'wait' }); // Identifier is 'wait' for sorting
-    }
-});
-
-addEnterStepButton.addEventListener('click', () => {
-    addStepToSequence({ type: 'special', command: 'pressEnter', value: 'true', identifier: 'pressEnter' });
-});
-
-// Handler for Applying Sequence
-applySequenceButton.addEventListener('click', async () => {
-    if (!currentTabId || !currentTabUrl) {
-        displayStatus("Cannot apply: No active tab context.", true); return;
-    }
+async function handleNewStep(newStepDataFromBg) {
+    if (!currentTabId) { displayStatus("No active tab.", true); return; }
     const key = getSequenceStorageKey(currentTabId);
     const data = await chrome.storage.local.get({ [key]: [] });
-    const sequence = data[key] || [];
+    let sequence = data[key] || [];
+    const stepToAdd = { ...newStepDataFromBg }; // Create a copy
 
-    if (sequence.length === 0) {
-        displayStatus("Sequence is empty.", true); return;
-    }
+    if (stepToAdd.elementType === 'SELECT' && stepToAdd.actionType === 'inject') {
+        stepToAdd.optionsFetched = false;
+        stepToAdd.selectOptions = [];
+        sequence.push(stepToAdd);
+        await saveSequenceForCurrentTab(sequence); // Show "Loading options..."
+        displayStatus(`Fetching options for SELECT...`, false, 0);
 
-    // Send sequence to background script to build URL and reload
-    chrome.runtime.sendMessage(
-        {
-            action: "buildAndReload",
-            tabId: currentTabId,
-            baseUrl: currentTabUrl, // Send base URL of the current tab
-            sequence: sequence
-        },
-        (response) => {
-            if (chrome.runtime.lastError) {
-                displayStatus(`Error: ${chrome.runtime.lastError.message}`, true);
-            } else if (response && response.status === "success") {
-                displayStatus("Page reloading with sequence...", false);
-                // Optionally close popup: window.close();
-            } else {
-                displayStatus("Failed to apply sequence.", true);
+        chrome.runtime.sendMessage(
+            { action: "getSelectOptions", tabId: currentTabId, selectIdentifier: stepToAdd.fullIdentifier },
+            async (response) => {
+                const currentSequenceData = await chrome.storage.local.get(getSequenceStorageKey(currentTabId));
+                let currentSeq = currentSequenceData[getSequenceStorageKey(currentTabId)] || [];
+                const stepIndex = currentSeq.findIndex(s => s.fullIdentifier === stepToAdd.fullIdentifier && s.elementType === 'SELECT' && !s.optionsFetched);
+
+                if (stepIndex > -1) {
+                    if (response && response.status === "success") {
+                        currentSeq[stepIndex].selectOptions = response.options || [];
+                        currentSeq[stepIndex].optionsFetched = true;
+                        if (!currentSeq[stepIndex].value && response.options && response.options.length > 0) {
+                             currentSeq[stepIndex].value = response.options[0].value; // Default to first option
+                        }
+                        displayStatus("Options loaded. Choose one.", false, 3000);
+                    } else {
+                        displayStatus(`Failed to fetch options: ${response?.message || 'Error'}`, true);
+                        currentSeq[stepIndex].optionsFetched = true;
+                        currentSeq[stepIndex].selectOptions = [{text: "Error loading options", value:""}];
+                    }
+                    await saveSequenceForCurrentTab(currentSeq);
+                } else {
+                     console.warn("Could not find provisional SELECT step to update options.");
+                     displayStatus("Error updating options for step.", true);
+                }
             }
-        }
-    );
+        );
+    } else {
+        sequence.push(stepToAdd);
+        await saveSequenceForCurrentTab(sequence);
+        displayStatus("Step added to sequence.", false, 1500);
+    }
+}
+
+addWaitStepButton.addEventListener('click', () => {
+    const duration = prompt("Wait duration (e.g., 500ms, 2s):", "1s");
+    if (duration) {
+        handleNewStep({ fullIdentifier: 'wait', identifierType: 'special', elementType: 'SPECIAL_COMMAND', actionType: 'special', command: 'wait', value: duration, description: `Wait ${duration}` });
+    }
+});
+addEnterStepButton.addEventListener('click', () => {
+    handleNewStep({ fullIdentifier: 'pressEnter', identifierType: 'special', elementType: 'SPECIAL_COMMAND', actionType: 'special', command: 'pressEnter', value: 'true', description: `Press Enter Key` });
 });
 
-// Handler for Copying URL
+applySequenceButton.addEventListener('click', async () => {
+    if (!currentTabId || !currentTabUrlForSequence) { displayStatus("No active tab context.", true); return; }
+    const key = getSequenceStorageKey(currentTabId); const data = await chrome.storage.local.get({ [key]: [] }); const sequence = data[key] || [];
+    if (sequence.length === 0) { displayStatus("Sequence empty.", true); return; }
+    chrome.runtime.sendMessage({ action: "buildAndReload", tabId: currentTabId, baseUrl: currentTabUrlForSequence, sequence: sequence }, (response) => {
+        if (chrome.runtime.lastError) { displayStatus(`Error: ${chrome.runtime.lastError.message}`, true); } else if (response && response.status === "success") { displayStatus("Page reloading...", false); window.close(); /* Close popup on success */ } else { displayStatus(`Failed to apply: ${response?.message || 'Unknown'}`, true); }
+    });
+});
 copySequenceUrlButton.addEventListener('click', async () => {
-    if (!currentTabUrl) { displayStatus("No active tab context.", true); return; }
-    const key = getSequenceStorageKey(currentTabId);
-    const data = await chrome.storage.local.get({ [key]: [] });
-    const sequence = data[key] || [];
+    if (!currentTabUrlForSequence) { displayStatus("No active tab context for URL generation.", true); return; }
+    const key = getSequenceStorageKey(currentTabId); const data = await chrome.storage.local.get({ [key]: [] }); const sequence = data[key] || [];
     if (sequence.length === 0) { displayStatus("Sequence empty, nothing to copy.", false); return; }
-
-    let params = sequence.map(step => {
-        let key = step.identifier;
-        if (step.type !== 'id' && step.type !== 'special') key = `css:${key}`; // Assume css if not id or special
-        if (step.command === 'wait') key = 'wait';
-        if (step.command === 'pressEnter') key = 'pressEnter';
-        return `${encodeURIComponent(key)}=${encodeURIComponent(step.value)}`;
-    }).join('&');
-
-    const finalUrl = `${currentTabUrl}${currentTabUrl.includes('?') ? '&' : '?'}${params}`;
-    generatedUrlOutput.value = finalUrl;
-    generatedUrlContainer.style.display = 'block';
-    try {
-        await navigator.clipboard.writeText(finalUrl);
-        displayStatus("Full URL copied to clipboard!", false);
-    } catch (err) {
-        displayStatus("Failed to copy URL. See console.", true);
-        console.error("Clipboard copy failed:", err);
-    }
+    let params = sequence.map(step => { let paramKey = step.command === 'wait' ? 'wait' : (step.command === 'pressEnter' ? 'pressEnter' : step.fullIdentifier); return `${encodeURIComponent(paramKey)}=${encodeURIComponent(step.value)}`; }).join('&');
+    const finalUrl = `${currentTabUrlForSequence}${currentTabUrlForSequence.includes('?') ? (params ? '&' : '') : (params ? '?' : '')}${params}`;
+    generatedUrlOutput.value = finalUrl; generatedUrlContainer.style.display = 'block';
+    try { await navigator.clipboard.writeText(finalUrl); displayStatus("Full URL copied!", false); } catch (err) { displayStatus("Failed to copy.", true); console.error(err); }
 });
-
-
-// Handler for Clearing Sequence
 clearSequenceButton.addEventListener('click', async () => {
-    if (!currentTabId) return;
-    if (confirm("Are you sure you want to clear the sequence for this tab?")) {
-        await saveSequenceForCurrentTab([]);
-        displayStatus("Sequence cleared.", false);
-    }
+    if (!currentTabId) return; if (confirm("Clear sequence for this tab?")) { await saveSequenceForCurrentTab([]); displayStatus("Sequence cleared.", false); }
 });
 
-
-// --- Initialization ---
 async function initializePopup() {
-    // Get current tab info to key sequence storage
     try {
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tabs && tabs.length > 0) {
             currentTabId = tabs[0].id;
-            // Try to get a base URL for currentTabUrl
             if (tabs[0].url && tabs[0].url.startsWith('http')) {
                  const urlObj = new URL(tabs[0].url);
-                 currentTabUrl = `${urlObj.origin}${urlObj.pathname}`; // Base URL without query/hash
-            } else {
-                 currentTabUrl = null; // Not an http page
-            }
+                 currentTabUrlForSequence = `${urlObj.origin}${urlObj.pathname}`;
+            } else { currentTabUrlForSequence = "No Active HTTP Page"; } // Fallback
 
-            // Check if opened by background script for sequence building
-            const storageData = await chrome.storage.local.get('uspi_new_step_for_tab_' + currentTabId);
-            const newStepData = storageData['uspi_new_step_for_tab_' + currentTabId];
+            const storageKeyForNewStep = 'uspi_new_step_for_tab_' + currentTabId;
+            const data = await chrome.storage.local.get(storageKeyForNewStep);
+            const newStepDataFromBg = data[storageKeyForNewStep];
 
-            if (newStepData) {
-                document.querySelector('.tab-button[data-tab="sequence-builder-tab"]').click(); // Switch to sequence builder
-                await addStepToSequence(newStepData.step);
-                await chrome.storage.local.remove('uspi_new_step_for_tab_' + currentTabId); // Clear the pending step
+            if (newStepDataFromBg && newStepDataFromBg.step) {
+                document.querySelector('.tab-button[data-tab="sequence-builder-tab"]').click();
+                await handleNewStep(newStepDataFromBg.step);
+                await chrome.storage.local.remove(storageKeyForNewStep);
             } else {
-                loadSequenceForCurrentTab(); // Load sequence if not adding a new step
+                // Default to allowlist tab if not adding a step, but still load sequence data silently
+                await loadSequenceForCurrentTab();
+                if (!document.querySelector('.tab-button[data-tab="sequence-builder-tab"]').classList.contains('active')){
+                     document.querySelector('.tab-button[data-tab="allowlist-tab"]').click();
+                }
             }
         } else {
-            // Handle case where no active tab is found (e.g., popup opened from extensions page)
-             sequenceListElement.innerHTML = '<li class="no-steps">No active web page tab found.</li>';
+             sequenceListElement.innerHTML = '<li class="no-steps">No active web page.</li>';
+             document.querySelector('.tab-button[data-tab="sequence-builder-tab"]').disabled = true; // Disable sequence builder if no tab
         }
-    } catch (e) {
-        console.error("Error initializing popup:", e);
-        displayStatus("Error initializing popup.", true, 0);
-    }
-    loadAllowlistUrls(); // Always load allowlist
+    } catch (e) { console.error("Error initializing popup:", e); displayStatus("Init error.", true, 0); }
+    loadAllowlistUrls();
 }
 
-// Event Listeners for Allowlist
-addButton.addEventListener('click', () => addAllowlistUrl(urlInput.value));
-urlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addAllowlistUrl(urlInput.value); });
-addCurrentSiteButton.addEventListener('click', handleAddCurrentSiteToAllowlist);
-urlListElement.addEventListener('click', (e) => { if (e.target.classList.contains('remove-btn')) removeAllowlistUrl(e.target.dataset.url); });
+addAllowlistUrlButton.addEventListener('click', () => addAllowlistUrl(allowlistUrlInput.value));
+allowlistUrlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addAllowlistUrl(allowlistUrlInput.value); });
+addCurrentSiteToAllowlistButton.addEventListener('click', handleAddCurrentSiteToAllowlist);
+allowlistUrlListElement.addEventListener('click', (e) => { if (e.target.classList.contains('remove-btn')) removeAllowlistUrl(e.target.dataset.url); });
 
-// Initialize
 document.addEventListener('DOMContentLoaded', initializePopup);
